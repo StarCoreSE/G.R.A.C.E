@@ -80,6 +80,7 @@ namespace GraceFramework
                     {
                         var classDefinitions = GridLogicSession.GetClassDefinitions();
                         var matchingClass = classDefinitions.FirstOrDefault(classDef => classDef.ClassKey == key);
+                        logic.ClassName.Value = matchingClass.ClassName;
 
                         string shipClass = !matchingClass.Equals(default(ClassDefinition))
                         ? $"[{matchingClass.ClassName}] {logic.Block.CubeGrid.DisplayName}"

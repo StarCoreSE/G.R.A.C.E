@@ -19,8 +19,10 @@ namespace GraceFramework
 
         private Dictionary<long, IMyCubeGrid> _grids = new Dictionary<long, IMyCubeGrid>(); // EntityID, Grid
         private Dictionary<long, IMyCubeGrid> _trackedGrids = new Dictionary<long, IMyCubeGrid>(); // EntityID, Grid
+
         private Dictionary<long, GridStats> _trackedGridStats = new Dictionary<long, GridStats>(); // EntityID, GridStats
         private Dictionary<long, Dictionary<long, int>> _trackedFactionGrids = new Dictionary<long, Dictionary<long, int>>(); // EntityID, ClassKey + Count
+
         private Dictionary<long, ClassDefinition> _classDefinitions = new Dictionary<long, ClassDefinition>(); // ClassKey, ClassDefinition
 
         public override void LoadData()
@@ -52,6 +54,21 @@ namespace GraceFramework
             {
                 MyAPIGateway.Utilities.ShowMessage("EntityAdded", $"Found Valid Beacon");
                 _trackedGrids[grid.EntityId] = grid;
+                if (GetBeaconLogic(grid).ClassKey.Value != 0 && !_trackedGridStats.ContainsKey(grid.EntityId))
+                {
+                    var logic = GetBeaconLogic(grid);
+                    var blockCount = new List<IMySlimBlock>();
+                    grid.GetBlocks(blockCount);
+                    _trackedGridStats[grid.EntityId] = new GridStats()
+                    {
+                        ClassKey = logic.ClassKey.Value,
+                        ClassName = logic.ClassName.Value,
+
+                        BlockCount = blockCount.Count(),
+                        Mass = grid.Physics.Mass,
+                    };
+                }
+                
                 grid.OnBlockAdded += Grid_OnBlockAdded;
             }
 
@@ -86,8 +103,31 @@ namespace GraceFramework
 
                 foreach (var grid in _trackedGrids.Values)
                 {
-                    if (grid.MarkedForClose) 
+                    if (grid.MarkedForClose)
                         continue;
+
+                    if (GetBeaconLogic(grid).ClassKey.Value != 0 && !_trackedGridStats.ContainsKey(grid.EntityId))
+                    {
+                        var logic = GetBeaconLogic(grid);
+                        var blockCount = new List<IMySlimBlock>();
+                        grid.GetBlocks(blockCount);
+                        _trackedGridStats[grid.EntityId] = new GridStats()
+                        {
+                            ClassKey = logic.ClassKey.Value,
+                            ClassName = logic.ClassName.Value,
+
+                            BlockCount = blockCount.Count(),
+                            Mass = grid.Physics.Mass,
+                        };
+                    }
+
+                    GridStats gridStats;
+                    ClassDefinition classDefinition;             
+                    if (_trackedGridStats.TryGetValue(grid.EntityId, out gridStats) && _classDefinitions.TryGetValue(GetBeaconLogic(grid).ClassKey, out classDefinition)) 
+                    {
+
+                        MyAPIGateway.Utilities.ShowNotification($"GridStats: Class:[{gridStats.ClassName}] BlockCount:[{gridStats.BlockCount}/{classDefinition.MaxBlockCount}] Mass:[{gridStats.Mass}/{classDefinition.MaxClassWeight}]", 15, "White");
+                    }
 
                     // LimitViolationEnforcement();
                 }
@@ -140,6 +180,12 @@ namespace GraceFramework
                                      && ClassBeacon.GetLogic<ClassBeacon>(block.EntityId) != null);
         }
 
+        private ClassBeacon GetBeaconLogic(IMyCubeGrid grid)
+        {
+            var block = grid.GetFatBlocks<IMyBeacon>().Where(b => b.BlockDefinition.SubtypeName == "LargeBlockBeacon").First();
+            return ClassBeacon.GetLogic<ClassBeacon>(block.EntityId);
+        }
+
         public static List<ClassDefinition> GetClassDefinitions()
         {
             return Instance?._classDefinitions.Values.ToList() ?? new List<ClassDefinition>();
@@ -149,10 +195,10 @@ namespace GraceFramework
     public class GridStats
     {
         public string ClassName { get; set; }
-        public int ClassKey { get; set; }
+        public long ClassKey { get; set; }
         
         public int BlockCount { get; set; }
-        public int Mass { get; set; }
+        public float Mass { get; set; }
 
         public int TurretedWeaponCount { get; set; }
         public int FixedWeaponCount { get; set; }
