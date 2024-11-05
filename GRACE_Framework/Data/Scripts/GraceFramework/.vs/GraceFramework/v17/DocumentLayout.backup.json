@@ -3,8 +3,8 @@
   "WorkspaceRootPath": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|c:\\users\\chet\\appdata\\roaming\\spaceengineers\\mods\\grace_framework\\data\\scripts\\graceframework\\class1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|solutionrelative:class1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|c:\\users\\chet\\appdata\\roaming\\spaceengineers\\mods\\grace_framework\\data\\scripts\\graceframework\\gridlogic_session.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|solutionrelative:gridlogic_session.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -19,14 +19,14 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "Class1.cs",
-              "DocumentMoniker": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\Class1.cs",
-              "RelativeDocumentMoniker": "Class1.cs",
-              "ToolTip": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\Class1.cs",
-              "RelativeToolTip": "Class1.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Title": "GridLogic_Session.cs",
+              "DocumentMoniker": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\GridLogic_Session.cs",
+              "RelativeDocumentMoniker": "GridLogic_Session.cs",
+              "ToolTip": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\GridLogic_Session.cs",
+              "RelativeToolTip": "GridLogic_Session.cs",
+              "ViewState": "AgIAAE8AAAAAAAAAAAA4wH0AAAA0AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-11-05T04:19:54.847Z",
+              "WhenOpened": "2024-11-05T04:34:40.239Z",
               "EditorCaption": ""
             }
           ]
