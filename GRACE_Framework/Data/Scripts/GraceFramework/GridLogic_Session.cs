@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using Sandbox.Game.Entities.Cube;
 using Sandbox.ModAPI;
@@ -12,14 +13,15 @@ using static Scripts.Structure;
 namespace GraceFramework
 {
     [MySessionComponentDescriptor(MyUpdateOrder.BeforeSimulation)]
-    public class GridLogicSession : MySessionComponentBase
+    public partial class GridLogicSession : MySessionComponentBase
     {
         public static GridLogicSession Instance;
 
+        private Dictionary<long, IMyCubeGrid> _grids = new Dictionary<long, IMyCubeGrid>(); // EntityID, Grid
         private Dictionary<long, IMyCubeGrid> _trackedGrids = new Dictionary<long, IMyCubeGrid>(); // EntityID, Grid
         private Dictionary<long, GridStats> _trackedGridStats = new Dictionary<long, GridStats>(); // EntityID, GridStats
         private Dictionary<long, Dictionary<long, int>> _trackedFactionGrids = new Dictionary<long, Dictionary<long, int>>(); // EntityID, ClassKey + Count
-        private Dictionary<long, ClassDefinition> _classDefinitions = new Dictionary<long, ClassDefinition>(); // EntityID, ClassDefinitions
+        private Dictionary<long, ClassDefinition> _classDefinitions = new Dictionary<long, ClassDefinition>(); // ClassKey, ClassDefinition
 
         public override void LoadData()
         {
@@ -43,29 +45,51 @@ namespace GraceFramework
         private void EntityAdded(IMyEntity ent)
         {
             var grid = ent as IMyCubeGrid;
+            if (grid == null)
+                return;
 
-            if (grid != null && grid.GetFatBlocks<IMyBeacon>().Any(block => (block.BlockDefinition.SubtypeName == "LargeBlockBeacon" && ClassBeacon.GetLogic<ClassBeacon>(block.EntityId) != null)))
+            if (HasValidBeacon(grid))
             {
-                _trackedGrids.Add(grid.EntityId, grid);
-                grid.OnMarkForClose += GridMarkedForClose;
+                MyAPIGateway.Utilities.ShowMessage("EntityAdded", $"Found Valid Beacon");
+                _trackedGrids[grid.EntityId] = grid;
+                grid.OnBlockAdded += Grid_OnBlockAdded;
             }
+
+            _grids[grid.EntityId] = grid;
+            grid.OnMarkForClose += GridMarkedForClose;
         }
 
         private void GridMarkedForClose(IMyEntity ent)
         {
-            _trackedGrids.Remove(ent.EntityId);
+            _grids.Remove(ent.EntityId);
+
+            if (_trackedGrids.Keys.Contains(ent.EntityId))
+            {
+                _trackedGrids.Remove(ent.EntityId);
+            }
+            
         }
 
         public override void UpdateBeforeSimulation()
         {
             try
             {
+                foreach (var grid in _grids.Values)
+                {
+                    if (HasValidBeacon(grid) && !_trackedGrids.ContainsKey(grid.EntityId))
+                    {
+                        MyAPIGateway.Utilities.ShowMessage("BeforeSimulation", $"Found Grid to Track");
+                        _trackedGrids[grid.EntityId] = grid;
+                        grid.OnBlockAdded += Grid_OnBlockAdded;
+                    }
+                }
+
                 foreach (var grid in _trackedGrids.Values)
                 {
-                    if (grid.MarkedForClose)
+                    if (grid.MarkedForClose) 
                         continue;
 
-                    // EEEEE
+                    // LimitViolationEnforcement();
                 }
             }
             catch (Exception e)
@@ -107,6 +131,13 @@ namespace GraceFramework
             {
                 MyLog.Default.WriteLine($"[GlobalGridClasses] Error in receiving definitions: {ex.Message}");
             }
+        }
+
+        private bool HasValidBeacon(IMyCubeGrid grid)
+        {
+            return grid.GetFatBlocks<IMyBeacon>()
+                       .Any(block => block.BlockDefinition.SubtypeName == "LargeBlockBeacon"
+                                     && ClassBeacon.GetLogic<ClassBeacon>(block.EntityId) != null);
         }
 
         public static List<ClassDefinition> GetClassDefinitions()
