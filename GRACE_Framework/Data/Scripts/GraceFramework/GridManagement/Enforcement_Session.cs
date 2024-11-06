@@ -43,8 +43,8 @@ namespace GraceFramework
 
         private void LimitViolationEnforcement()
         {
-            foreach ( var gridInfo in _trackedGrids.Values)
-            {      
+            foreach (var gridInfo in _trackedGrids.Values)
+            {
                 var messageBuilder = new StringBuilder($"Grid {gridInfo.Grid.DisplayName} Violated Class Rules! For:");
 
                 ClassDefinition classDefinition;
@@ -52,10 +52,10 @@ namespace GraceFramework
                 {
                     bool violationFound = false;
 
-                    if (CheckBlockCount(gridInfo, classDefinition, messageBuilder)) 
+                    if (CheckBlockCount(gridInfo, classDefinition, messageBuilder))
                         violationFound = true;
 
-                    if (CheckMass(gridInfo, classDefinition, messageBuilder)) 
+                    if (CheckMass(gridInfo, classDefinition, messageBuilder))
                         violationFound = true;
 
                     if (violationFound)
@@ -96,6 +96,20 @@ namespace GraceFramework
             else if (gridInfo.Mass < classDefinition.MinClassWeight)
             {
                 messageBuilder.Append(" [Minimum Weight Not Met!]");
+                violated = true;
+            }
+
+            return violated;
+        }
+
+        private bool CheckBlacklist(GridInfo gridInfo, ClassDefinition classDefinition, StringBuilder messageBuilder)
+        {
+            bool violated = false;
+
+            var functionalBlocks = gridInfo.Grid.GetFatBlocks<IMyFunctionalBlock>();
+            if (functionalBlocks.Any(block => classDefinition.BlacklistedBlocks.Contains(block.BlockDefinition.SubtypeName)))
+            {
+                messageBuilder.Append(" [Grid Has Blacklisted Blocks!]");
                 violated = true;
             }
 
