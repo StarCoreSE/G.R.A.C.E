@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.VisualBasic;
 using Sandbox.Game;
 using Sandbox.ModAPI;
 using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
+using VRage.Game.VisualScripting;
 using VRage.ModAPI;
 using VRage.Utils;
 using static Scripts.Structure;
@@ -16,6 +18,9 @@ namespace GraceFramework
 {
     public partial class GridLogicSession
     {
+        private int UpdateCounter = 0;
+        private int UpdateInterval = 100;
+
         private void TrackNewGrids()
         {
             foreach (var grid in _grids.Values)
@@ -44,6 +49,9 @@ namespace GraceFramework
                 if (gridInfo.ClassKey == 0)
                 {
                     var logic = GetBeaconLogic(gridInfo.Grid);
+                    if (logic == null)
+                        continue;
+
                     if (logic.ClassKey.Value != 0)
                     {
                         gridInfo.ClassKey = logic.ClassKey.Value;
@@ -69,13 +77,15 @@ namespace GraceFramework
                     }
                 }
 
+                UpdateGridStats(gridInfo);
+
                 ClassDefinition classDefinition;
                 if (_classDefinitions.TryGetValue(gridInfo.ClassKey, out classDefinition))
                 {
                     MyAPIGateway.Utilities.ShowNotification(
                         $"GridStats: Class:[{gridInfo.ClassName}] " +
                         $"BlockCount:[{gridInfo.BlockCount}/{classDefinition.MaxBlockCount}] " +
-                        $"Mass:[{gridInfo.Mass}/{classDefinition.MaxClassWeight}]",
+                        $"Mass:[{gridInfo.Mass:N0}/{classDefinition.MaxClassWeight:N0}]",
                         15,
                         "White"
                     );
@@ -88,8 +98,9 @@ namespace GraceFramework
             GridInfo info;
             _trackedGrids.TryGetValue(entityID, out info);
 
-            long factionId = MyAPIGateway.Session.Factions.TryGetPlayerFaction(info.Grid.BigOwners.First())?.FactionId ?? 0;
-            long playerId = info.Grid.BigOwners.First();
+            long playerId = info?.Grid?.BigOwners?.First() ?? 0;
+            long factionId = MyAPIGateway.Session.Factions.TryGetPlayerFaction(playerId)?.FactionId ?? 0;
+
             long classKey = info.ClassKey;
 
             // Update faction class count
@@ -121,7 +132,7 @@ namespace GraceFramework
         {
             if (!_playerClassCounts.ContainsKey(playerId))
             {
-                MyAPIGateway.Utilities.ShowNotification("No tracked classes for this player.", 15, "White");
+                MyAPIGateway.Utilities.ShowNotification($"No tracked classes for Player {MyAPIGateway.Players.TryGetIdentityId(playerId).DisplayName}", 15, "White");
                 return;
             }
 
@@ -145,6 +156,64 @@ namespace GraceFramework
                 messageBuilder.Length -= 2;
 
             MyAPIGateway.Utilities.ShowNotification(messageBuilder.ToString(), 15, "White");
+        }
+
+        private void ShowFactionClassCounts(long factionId)
+        {
+            if (!_factionClassCounts.ContainsKey(factionId))
+            {
+                MyAPIGateway.Utilities.ShowNotification($"No tracked classes for Faction {MyAPIGateway.Session.Factions.TryGetFactionById(factionId).Tag}", 15, "White");
+                return;
+            }
+
+            var counts = _factionClassCounts[factionId];
+            var messageBuilder = new System.Text.StringBuilder("FactionCounts: ");
+
+            foreach (var classEntry in counts)
+            {
+                long classKey = classEntry.Key;
+                int count = classEntry.Value;
+
+                ClassDefinition classDefinition;
+                if (_classDefinitions.TryGetValue(classKey, out classDefinition))
+                {
+                    messageBuilder.Append($"[{classDefinition.ClassName}] {count}/{classDefinition.PerFactionAmount}, ");
+                }
+
+            }
+
+            if (messageBuilder.Length > 0)
+                messageBuilder.Length -= 2;
+
+            MyAPIGateway.Utilities.ShowNotification(messageBuilder.ToString(), 15, "White");
+        }
+
+        private void UpdateGridStats(GridInfo gridInfo)
+        {
+            UpdateCounter++;
+
+            if (gridInfo.Grid != null)
+            {
+                int updateCount = (int)(gridInfo.Grid.EntityId % UpdateInterval);
+
+                if (UpdateCounter % UpdateInterval == updateCount)
+                {
+                    var logic = GetBeaconLogic(gridInfo.Grid);
+                    if (logic != null)
+                    {
+                        var blockCount = new List<IMySlimBlock>();
+                        gridInfo.Grid.GetBlocks(blockCount);
+
+                        gridInfo.BlockCount = blockCount.Count;
+                        gridInfo.Mass = gridInfo.Grid.Physics?.Mass ?? 0;
+                    }
+                }
+            }
+
+            if (UpdateCounter >= int.MaxValue - UpdateInterval)
+            {
+                UpdateCounter = 0;
+            }
         }
     }
 }

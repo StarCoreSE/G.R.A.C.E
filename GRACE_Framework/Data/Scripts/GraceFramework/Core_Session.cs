@@ -9,6 +9,7 @@ using VRage.Game.ModAPI;
 using VRage.ModAPI;
 using VRage.Utils;
 using static Scripts.Structure;
+using Sandbox.Game;
 
 namespace GraceFramework
 {
@@ -17,13 +18,13 @@ namespace GraceFramework
     {
         public static GridLogicSession Instance;
 
-        private Dictionary<long, IMyCubeGrid> _grids = new Dictionary<long, IMyCubeGrid>(); // EntityID, Grid
-        private Dictionary<long, GridInfo> _trackedGrids = new Dictionary<long, GridInfo>(); // EntityID, GridInfo
+        public Dictionary<long, IMyCubeGrid> _grids = new Dictionary<long, IMyCubeGrid>(); // EntityID, Grid
+        public Dictionary<long, GridInfo> _trackedGrids = new Dictionary<long, GridInfo>(); // EntityID, GridInfo
 
-        private Dictionary<long, Dictionary<long, int>> _factionClassCounts = new Dictionary<long, Dictionary<long, int>>(); // FactionID, ClassKey + Count
-        private Dictionary<long, Dictionary<long, int>> _playerClassCounts = new Dictionary<long, Dictionary<long, int>>(); // PlayerID, ClassKey + Count
+        public Dictionary<long, Dictionary<long, int>> _factionClassCounts = new Dictionary<long, Dictionary<long, int>>(); // FactionID, ClassKey + Count
+        public Dictionary<long, Dictionary<long, int>> _playerClassCounts = new Dictionary<long, Dictionary<long, int>>(); // PlayerID, ClassKey + Count
 
-        private Dictionary<long, ClassDefinition> _classDefinitions = new Dictionary<long, ClassDefinition>(); // ClassKey, ClassDefinition
+        public Dictionary<long, ClassDefinition> _classDefinitions = new Dictionary<long, ClassDefinition>(); // ClassKey, ClassDefinition
 
         public override void LoadData()
         {
@@ -94,6 +95,7 @@ namespace GraceFramework
                 if (info.ClassKey != 0)
                 {
                     UpdateClassCounts(grid.EntityId, false);
+                    info = null;
                 }
 
                 _trackedGrids.Remove(grid.EntityId);
@@ -114,8 +116,14 @@ namespace GraceFramework
                 {
                     ShowPlayerClassCounts(player.IdentityId);
                 }
-                
-                // LimitViolationEnforcement();
+
+                List<IMyFaction> factions = new List<IMyFaction>();
+                foreach (var faction in MyAPIGateway.Session.Factions.Factions)
+                {
+                    ShowFactionClassCounts(faction.Key);
+                }
+
+                LimitViolationEnforcement();
             }
             catch (Exception e)
             {
@@ -167,6 +175,9 @@ namespace GraceFramework
 
         private ClassBeacon GetBeaconLogic(IMyCubeGrid grid)
         {
+            if (grid == null || !grid.GetFatBlocks<IMyBeacon>().Any())
+                return null;
+
             var block = grid.GetFatBlocks<IMyBeacon>().Where(b => b.BlockDefinition.SubtypeName == "LargeBlockBeacon").First();
             return ClassBeacon.GetLogic<ClassBeacon>(block.EntityId);
         }

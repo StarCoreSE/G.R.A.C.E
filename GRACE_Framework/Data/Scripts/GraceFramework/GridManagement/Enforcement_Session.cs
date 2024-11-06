@@ -43,7 +43,63 @@ namespace GraceFramework
 
         private void LimitViolationEnforcement()
         {
+            foreach ( var gridInfo in _trackedGrids.Values)
+            {      
+                var messageBuilder = new StringBuilder($"Grid {gridInfo.Grid.DisplayName} Violated Class Rules! For:");
 
-        }        
+                ClassDefinition classDefinition;
+                if (_classDefinitions.TryGetValue(gridInfo.ClassKey, out classDefinition))
+                {
+                    bool violationFound = false;
+
+                    if (CheckBlockCount(gridInfo, classDefinition, messageBuilder)) 
+                        violationFound = true;
+
+                    if (CheckMass(gridInfo, classDefinition, messageBuilder)) 
+                        violationFound = true;
+
+                    if (violationFound)
+                    {
+                        MyAPIGateway.Utilities.ShowNotification(messageBuilder.ToString(), 15, "Red");
+                    }
+                }
+            }
+        }
+
+        private bool CheckBlockCount(GridInfo gridInfo, ClassDefinition classDefinition, StringBuilder messageBuilder)
+        {
+            bool violated = false;
+
+            if (gridInfo.BlockCount > classDefinition.MaxBlockCount)
+            {
+                messageBuilder.Append(" [Maximum Block Count Exceeded!]");
+                violated = true;
+            }
+            else if (gridInfo.BlockCount < classDefinition.MinBlockCount)
+            {
+                messageBuilder.Append(" [Minimum Block Count Not Met!]");
+                violated = true;
+            }
+
+            return violated;
+        }
+
+        private bool CheckMass(GridInfo gridInfo, ClassDefinition classDefinition, StringBuilder messageBuilder)
+        {
+            bool violated = false;
+
+            if (gridInfo.Mass > classDefinition.MaxClassWeight)
+            {
+                messageBuilder.Append(" [Maximum Weight Exceeded!]");
+                violated = true;
+            }
+            else if (gridInfo.Mass < classDefinition.MinClassWeight)
+            {
+                messageBuilder.Append(" [Minimum Weight Not Met!]");
+                violated = true;
+            }
+
+            return violated;
+        }
     }
 }

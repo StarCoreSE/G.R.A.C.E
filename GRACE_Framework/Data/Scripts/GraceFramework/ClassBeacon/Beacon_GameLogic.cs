@@ -38,6 +38,20 @@ namespace GraceFramework
             ClassBeaconControls.DoOnce(ModContext);
         }
 
+        public override void Close()
+        {
+            var I = GridLogicSession.Instance;
+            if (I != null)
+            {
+                if (I._trackedGrids.ContainsKey(Block.CubeGrid.EntityId))
+                {
+                    I._trackedGrids.Remove(Block.CubeGrid.EntityId);
+                }
+            }
+
+            base.Close();
+        }
+
         public static T GetLogic<T>(long entityId) where T : MyGameLogicComponent
         {
             IMyEntity targetEntity = MyAPIGateway.Entities.GetEntityById(entityId);
