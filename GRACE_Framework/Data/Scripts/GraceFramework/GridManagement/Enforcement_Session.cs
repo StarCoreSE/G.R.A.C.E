@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ProtoBuf;
 using Sandbox.Game;
 using Sandbox.ModAPI;
 using VRage.Game;
@@ -16,6 +17,8 @@ namespace GraceFramework
 {
     public partial class GridLogicSession
     {
+        public Dictionary<long, IMyCubeGrid> _gridsInViolation = new Dictionary<long, IMyCubeGrid>();
+
         private void Grid_OnBlockAdded(IMySlimBlock block)
         {
             var fatBlock = block?.FatBlock;
@@ -58,9 +61,20 @@ namespace GraceFramework
                     if (CheckMass(gridInfo, classDefinition, messageBuilder))
                         violationFound = true;
 
+                    if (CheckBlacklist(gridInfo, classDefinition, messageBuilder))
+                        violationFound = true;
+
                     if (violationFound)
                     {
+                        if (!_gridsInViolation.ContainsKey(gridInfo.Grid.EntityId))
+                            _gridsInViolation.Add(gridInfo.Grid.EntityId, gridInfo.Grid);
+
                         MyAPIGateway.Utilities.ShowNotification(messageBuilder.ToString(), 15, "Red");
+                    }
+                    else
+                    {
+                        if (_gridsInViolation.ContainsKey(gridInfo.Grid.EntityId))
+                            _gridsInViolation.Remove(gridInfo.Grid.EntityId);
                     }
                 }
             }
@@ -115,5 +129,82 @@ namespace GraceFramework
 
             return violated;
         }
+
+        private void SaveViolations()
+        {
+            try
+            {
+                if (MyAPIGateway.Utilities == null)
+                {
+                    MyLog.Default.WriteLine($"[GRACE] SaveViolations failed: MyAPIGateway.Utilities is null.");
+                    return;
+                }
+
+                var settings = new SavedViolations
+                {
+                    Saved_gridsInViolation = _gridsInViolation.Keys.ToList() 
+                };
+
+                byte[] serializedData = MyAPIGateway.Utilities.SerializeToBinary(settings);
+                using (var writer = MyAPIGateway.Utilities.WriteBinaryFileInWorldStorage("ViolationsData.bin", typeof(GridLogicSession)))
+                {
+                    writer.Write(serializedData, 0, serializedData.Length);
+                }
+
+                MyLog.Default.WriteLine($"[GRACE] SaveViolations: Successfully saved violation data to session storage.");
+            }
+            catch (Exception e)
+            {
+                MyLog.Default.WriteLine($"[GRACE] Error saving violation data!\n{e}");
+            }
+        }
+
+        private bool LoadViolations()
+        {
+            try
+            {
+                if (MyAPIGateway.Utilities == null)
+                {
+                    MyLog.Default.WriteLine($"[GRACE] SaveViolations failed: MyAPIGateway.Utilities is null.");
+                    return false;
+                }
+
+                var reader = MyAPIGateway.Utilities.ReadBinaryFileInWorldStorage("ViolationsData.bin", typeof(GridLogicSession));
+                using (reader)
+                {
+                    if (reader.BaseStream.Length == 0)
+                        return false;
+
+                    byte[] data = new byte[reader.BaseStream.Length];
+                    reader.Read(data, 0, data.Length);
+
+                    var settings = MyAPIGateway.Utilities.SerializeFromBinary<SavedViolations>(data);
+
+                    if (settings?.Saved_gridsInViolation != null)
+                    {
+                        _gridsInViolation = settings.Saved_gridsInViolation
+                            .Select(id => MyAPIGateway.Entities.GetEntityById(id) as IMyCubeGrid)
+                            .Where(grid => grid != null)
+                            .ToDictionary(grid => grid.EntityId);
+
+                        MyLog.Default.WriteLine($"[GRACE] SaveViolations: Successfully loaded violation data from session storage.");
+                        return true;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                MyLog.Default.WriteLine($"[GRACE] Error loading violation data!\n{e}");
+            }
+
+            return false;
+        }
+    }
+
+    [ProtoContract]
+    public class SavedViolations
+    {
+        [ProtoMember(1)]
+        public List<long> Saved_gridsInViolation { get; set; } // Store as a list of grid IDs
     }
 }

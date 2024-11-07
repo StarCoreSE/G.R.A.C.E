@@ -10,6 +10,8 @@ using VRage.ModAPI;
 using VRage.Utils;
 using static Scripts.Structure;
 using Sandbox.Game;
+using Sandbox.Game.EntityComponents;
+using static Scripts.Communication;
 
 namespace GraceFramework
 {
@@ -17,6 +19,7 @@ namespace GraceFramework
     public partial class GridLogicSession : MySessionComponentBase
     {
         public static GridLogicSession Instance;
+        private bool _clearedViolations;
 
         public Dictionary<long, IMyCubeGrid> _grids = new Dictionary<long, IMyCubeGrid>(); // EntityID, Grid
         public Dictionary<long, GridInfo> _trackedGrids = new Dictionary<long, GridInfo>(); // EntityID, GridInfo
@@ -32,6 +35,8 @@ namespace GraceFramework
 
             MyAPIGateway.Utilities.RegisterMessageHandler(6831, OnReceivedDefinitions);
 
+            MyAPIGateway.Session.Factions.FactionCreated += OnFactionCreated;
+
             MyAPIGateway.Entities.OnEntityAdd += EntityAdded;
         }
 
@@ -39,7 +44,11 @@ namespace GraceFramework
         {
             MyAPIGateway.Utilities.UnregisterMessageHandler(6831, OnReceivedDefinitions);
 
+            MyAPIGateway.Session.Factions.FactionCreated -= OnFactionCreated;
+
             MyAPIGateway.Entities.OnEntityAdd -= EntityAdded;
+
+            SaveViolations();
 
             _trackedGrids.Clear();
             _classDefinitions.Clear();
@@ -106,6 +115,23 @@ namespace GraceFramework
         {
             try
             {
+                if (!_clearedViolations)
+                {
+                    if (LoadViolations())
+                    {
+                        _gridsInViolation.Keys.ToList().ForEach(key =>
+                        {
+                            var grid = _gridsInViolation[key];
+                            grid.Close();
+                            _gridsInViolation.Remove(key);
+                        });
+
+                        _clearedViolations = true;
+                    }
+
+                    _clearedViolations = true;
+                }
+
                 TrackNewGrids();
 
                 UpdateTrackedGrids();
@@ -152,17 +178,17 @@ namespace GraceFramework
                             }
                             else
                             {
-                                MyLog.Default.WriteLine($"[GlobalGridClasses] Duplicate ClassKey found: {definition.ClassKey} for Class: {definition.ClassName}. Skipping addition.");
+                                MyLog.Default.WriteLine($"[GRACE] Duplicate ClassKey found: {definition.ClassKey} for Class: {definition.ClassName}. Skipping addition.");
                             }
                         }
 
-                        MyLog.Default.WriteLine($"[GlobalGridClasses] Successfully received and stored {container.ClassDefinitions.Length} definitions.");
+                        MyLog.Default.WriteLine($"[GRACE] Successfully received and stored {container.ClassDefinitions.Length} definitions.");
                     }
                 }
             }
             catch (Exception ex)
             {
-                MyLog.Default.WriteLine($"[GlobalGridClasses] Error in receiving definitions: {ex.Message}");
+                MyLog.Default.WriteLine($"[GRACE] Error in receiving definitions: {ex.Message}");
             }
         }
 
@@ -185,6 +211,22 @@ namespace GraceFramework
         public static List<ClassDefinition> GetClassDefinitions()
         {
             return Instance?._classDefinitions.Values.ToList() ?? new List<ClassDefinition>();
+        }
+
+        private void OnFactionCreated(long factionId)
+        {
+            InitializeClassLimits(factionId, 0);
+
+            foreach (var gridInfo in _trackedGrids.Values)
+            {
+                long playerId = gridInfo.Grid.BigOwners?.FirstOrDefault() ?? 0;
+                long gridFactionId = MyAPIGateway.Session.Factions.TryGetPlayerFaction(playerId)?.FactionId ?? 0;
+
+                if (gridFactionId == factionId)
+                {
+                    UpdateClassCounts(gridInfo.Grid.EntityId, true, UpdateTarget.Faction);
+                }
+            }
         }
     }
 

@@ -18,6 +18,13 @@ namespace GraceFramework
 {
     public partial class GridLogicSession
     {
+        private enum UpdateTarget
+        {
+            Faction,
+            Player,
+            Both
+        }
+
         private int UpdateCounter = 0;
         private int UpdateInterval = 100;
 
@@ -93,41 +100,63 @@ namespace GraceFramework
             }
         }
 
-        private void UpdateClassCounts(long entityID, bool add)
+        private void UpdateClassCounts(long entityID, bool add, UpdateTarget target = UpdateTarget.Both)
         {
             GridInfo info;
             _trackedGrids.TryGetValue(entityID, out info);
 
             long playerId = info?.Grid?.BigOwners?.First() ?? 0;
             long factionId = MyAPIGateway.Session.Factions.TryGetPlayerFaction(playerId)?.FactionId ?? 0;
+            long classKey = info?.ClassKey ?? 0;
 
-            long classKey = info.ClassKey;
+            InitializeClassLimits(factionId, playerId);
 
-            // Update faction class count
-            if (!_factionClassCounts.ContainsKey(factionId))
-                _factionClassCounts[factionId] = new Dictionary<long, int>();
+            if (classKey != 0)
+            {
+                if (target == UpdateTarget.Faction || target == UpdateTarget.Both)
+                {
+                    if (add)
+                        _factionClassCounts[factionId][classKey]++;
+                    else
+                        _factionClassCounts[factionId][classKey] = Math.Max(0, _factionClassCounts[factionId][classKey] - 1);
+                }
 
-            if (!_factionClassCounts[factionId].ContainsKey(classKey))
-                _factionClassCounts[factionId][classKey] = 0;
-
-            if (add)
-                _factionClassCounts[factionId][classKey]++;
-            else
-                _factionClassCounts[factionId][classKey]--;
-
-            // Update player class count
-            if (!_playerClassCounts.ContainsKey(playerId))
-                _playerClassCounts[playerId] = new Dictionary<long, int>();
-
-            if (!_playerClassCounts[playerId].ContainsKey(classKey))
-                _playerClassCounts[playerId][classKey] = 0;
-
-            if (add)
-                _playerClassCounts[playerId][classKey]++;
-            else
-                _playerClassCounts[playerId][classKey]--;
+                if (target == UpdateTarget.Player || target == UpdateTarget.Both)
+                {
+                    if (add)
+                        _playerClassCounts[playerId][classKey]++;
+                    else
+                        _playerClassCounts[playerId][classKey] = Math.Max(0, _playerClassCounts[playerId][classKey] - 1);
+                }
+            }
         }
 
+        private void InitializeClassLimits(long factionId, long playerId)
+        {
+            if (!_factionClassCounts.ContainsKey(factionId))
+            {
+                _factionClassCounts[factionId] = new Dictionary<long, int>();
+            }
+            foreach (var classDef in _classDefinitions)
+            {
+                if (!_factionClassCounts[factionId].ContainsKey(classDef.Key))
+                {
+                    _factionClassCounts[factionId][classDef.Key] = 0;
+                }
+            }
+
+            if (!_playerClassCounts.ContainsKey(playerId))
+            {
+                _playerClassCounts[playerId] = new Dictionary<long, int>();
+            }
+            foreach (var classDef in _classDefinitions)
+            {
+                if (!_playerClassCounts[playerId].ContainsKey(classDef.Key))
+                {
+                    _playerClassCounts[playerId][classDef.Key] = 0;
+                }
+            }
+        }
         private void ShowPlayerClassCounts(long playerId)
         {
             if (!_playerClassCounts.ContainsKey(playerId))
@@ -137,7 +166,7 @@ namespace GraceFramework
             }
 
             var counts = _playerClassCounts[playerId];
-            var messageBuilder = new System.Text.StringBuilder("PlayerCounts: ");
+            var messageBuilder = new System.Text.StringBuilder($"{MyAPIGateway.Players.TryGetIdentityId(playerId).DisplayName} Grids: ");
 
             foreach (var classEntry in counts)
             {
@@ -167,7 +196,7 @@ namespace GraceFramework
             }
 
             var counts = _factionClassCounts[factionId];
-            var messageBuilder = new System.Text.StringBuilder("FactionCounts: ");
+            var messageBuilder = new System.Text.StringBuilder($"{MyAPIGateway.Session.Factions.TryGetFactionById(factionId).Tag} Grids: ");
 
             foreach (var classEntry in counts)
             {
