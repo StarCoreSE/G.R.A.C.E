@@ -19,7 +19,6 @@ namespace GraceFramework
     public partial class GridLogicSession : MySessionComponentBase
     {
         public static GridLogicSession Instance;
-        private bool _clearedViolations;
 
         public Dictionary<long, IMyCubeGrid> _grids = new Dictionary<long, IMyCubeGrid>(); // EntityID, Grid
         public Dictionary<long, GridInfo> _trackedGrids = new Dictionary<long, GridInfo>(); // EntityID, GridInfo
@@ -29,6 +28,7 @@ namespace GraceFramework
 
         public Dictionary<long, ClassDefinition> _classDefinitions = new Dictionary<long, ClassDefinition>(); // ClassKey, ClassDefinition
 
+        #region Overrides
         public override void LoadData()
         {
             Instance = this;
@@ -38,6 +38,40 @@ namespace GraceFramework
             MyAPIGateway.Session.Factions.FactionCreated += OnFactionCreated;
 
             MyAPIGateway.Entities.OnEntityAdd += EntityAdded;
+        }
+
+        public override void UpdateBeforeSimulation()
+        {
+            try
+            {
+                ClearViolatingGridsOnce();
+
+                TrackNewGrids();
+
+                UpdateTrackedGrids();
+
+                List<IMyPlayer> players = new List<IMyPlayer>();
+                MyAPIGateway.Players.GetPlayers(players);
+                foreach (var player in players)
+                {
+                    ShowPlayerClassCounts(player.IdentityId);
+                }
+
+                List<IMyFaction> factions = new List<IMyFaction>();
+                foreach (var faction in MyAPIGateway.Session.Factions.Factions.Where(faction => !faction.Value.IsEveryoneNpc()))
+                {
+                    ShowFactionClassCounts(faction.Key);
+                }
+
+                EnforceViolations();
+            }
+            catch (Exception e)
+            {
+                MyLog.Default.WriteLineAndConsole($"{e.Message}\n{e.StackTrace}");
+
+                if (MyAPIGateway.Session?.Player != null)
+                    MyAPIGateway.Utilities.ShowNotification($"[ ERROR: {GetType().FullName}: {e.Message} | Send SpaceEngineers.Log to mod author ]", 10000, MyFontEnum.Red);
+            }
         }
 
         protected override void UnloadData()
@@ -53,7 +87,9 @@ namespace GraceFramework
             _trackedGrids.Clear();
             _classDefinitions.Clear();
         }
+        #endregion
 
+        #region Event Handlers
         private void EntityAdded(IMyEntity ent)
         {
             var grid = ent as IMyCubeGrid;
@@ -63,7 +99,7 @@ namespace GraceFramework
             _grids[grid.EntityId] = grid;
             grid.OnMarkForClose += GridMarkedForClose;
 
-            if (!HasValidBeacon(grid) || _trackedGrids.ContainsKey(grid.EntityId)) 
+            if (!HasValidBeacon(grid) || _trackedGrids.ContainsKey(grid.EntityId))
                 return;
 
             var logic = GetBeaconLogic(grid);
@@ -87,7 +123,7 @@ namespace GraceFramework
                 UpdateClassCounts(grid.EntityId, true);
             }
 
-            grid.OnBlockAdded += Grid_OnBlockAdded;            
+            grid.OnBlockAdded += Grid_OnBlockAdded;
         }
 
         private void GridMarkedForClose(IMyEntity ent)
@@ -109,56 +145,7 @@ namespace GraceFramework
 
                 _trackedGrids.Remove(grid.EntityId);
             }
-        }      
-
-        public override void UpdateBeforeSimulation()
-        {
-            try
-            {
-                if (!_clearedViolations)
-                {
-                    if (LoadViolations())
-                    {
-                        _gridsInViolation.Keys.ToList().ForEach(key =>
-                        {
-                            var grid = _gridsInViolation[key];
-                            grid.Close();
-                            _gridsInViolation.Remove(key);
-                        });
-
-                        _clearedViolations = true;
-                    }
-
-                    _clearedViolations = true;
-                }
-
-                TrackNewGrids();
-
-                UpdateTrackedGrids();
-
-                List<IMyPlayer> players = new List<IMyPlayer>();
-                MyAPIGateway.Players.GetPlayers(players);
-                foreach (var player in players)
-                {
-                    ShowPlayerClassCounts(player.IdentityId);
-                }
-
-                List<IMyFaction> factions = new List<IMyFaction>();
-                foreach (var faction in MyAPIGateway.Session.Factions.Factions)
-                {
-                    ShowFactionClassCounts(faction.Key);
-                }
-
-                LimitViolationEnforcement();
-            }
-            catch (Exception e)
-            {
-                MyLog.Default.WriteLineAndConsole($"{e.Message}\n{e.StackTrace}");
-
-                if (MyAPIGateway.Session?.Player != null)
-                    MyAPIGateway.Utilities.ShowNotification($"[ ERROR: {GetType().FullName}: {e.Message} | Send SpaceEngineers.Log to mod author ]", 10000, MyFontEnum.Red);
-            }
-        }     
+        }
 
         private void OnReceivedDefinitions(object o)
         {
@@ -191,7 +178,9 @@ namespace GraceFramework
                 MyLog.Default.WriteLine($"[GRACE] Error in receiving definitions: {ex.Message}");
             }
         }
+        #endregion
 
+        #region Helpers
         private bool HasValidBeacon(IMyCubeGrid grid)
         {
             return grid.GetFatBlocks<IMyBeacon>()
@@ -212,22 +201,7 @@ namespace GraceFramework
         {
             return Instance?._classDefinitions.Values.ToList() ?? new List<ClassDefinition>();
         }
-
-        private void OnFactionCreated(long factionId)
-        {
-            InitializeClassLimits(factionId, 0);
-
-            foreach (var gridInfo in _trackedGrids.Values)
-            {
-                long playerId = gridInfo.Grid.BigOwners?.FirstOrDefault() ?? 0;
-                long gridFactionId = MyAPIGateway.Session.Factions.TryGetPlayerFaction(playerId)?.FactionId ?? 0;
-
-                if (gridFactionId == factionId)
-                {
-                    UpdateClassCounts(gridInfo.Grid.EntityId, true, UpdateTarget.Faction);
-                }
-            }
-        }
+        #endregion
     }
 
     public class GridInfo

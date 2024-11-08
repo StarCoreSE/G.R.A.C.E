@@ -25,6 +25,7 @@ namespace GraceFramework
         public MySync<string, SyncDirection.BothWays> ClassName;
         public MySync<long, SyncDirection.BothWays> ClassKey;
 
+        #region Overrides
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
             base.Init(objectBuilder);
@@ -78,7 +79,9 @@ namespace GraceFramework
 
             base.Close();
         }
+        #endregion
 
+        #region Helpers
         public static T GetLogic<T>(long entityId) where T : MyGameLogicComponent
         {
             IMyEntity targetEntity = MyAPIGateway.Entities.GetEntityById(entityId);
@@ -101,6 +104,7 @@ namespace GraceFramework
 
             return logic;
         }
+        #endregion
 
         #region Settings
         private void OnVariableChangeString(MySync<string, SyncDirection.BothWays> sync)
@@ -185,7 +189,7 @@ namespace GraceFramework
     public class BeaconSettings
     {
         [ProtoMember(21)]
-        public string Stored_ClassName { get; set; }
+        public string? Stored_ClassName { get; set; }
 
         [ProtoMember(22)]
         public long Stored_ClassKey { get; set; }

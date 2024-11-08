@@ -18,7 +18,9 @@ namespace GraceFramework
     public partial class GridLogicSession
     {
         public Dictionary<long, IMyCubeGrid> _gridsInViolation = new Dictionary<long, IMyCubeGrid>();
+        private bool _clearedViolations;
 
+        #region Event Handlers
         private void Grid_OnBlockAdded(IMySlimBlock block)
         {
             var fatBlock = block?.FatBlock;
@@ -43,8 +45,30 @@ namespace GraceFramework
                 }
             }
         }
+        #endregion
 
-        private void LimitViolationEnforcement()
+        #region Updates
+        private void ClearViolatingGridsOnce()
+        {
+            if (!_clearedViolations)
+            {
+                if (LoadViolations())
+                {
+                    _gridsInViolation.Keys.ToList().ForEach(key =>
+                    {
+                        var grid = _gridsInViolation[key];
+                        grid.Close();
+                        _gridsInViolation.Remove(key);
+                    });
+
+                    _clearedViolations = true;
+                }
+
+                _clearedViolations = true;
+            }
+        }
+
+        private void EnforceViolations()
         {
             foreach (var gridInfo in _trackedGrids.Values)
             {
@@ -79,7 +103,9 @@ namespace GraceFramework
                 }
             }
         }
+        #endregion
 
+        #region Helpers
         private bool CheckBlockCount(GridInfo gridInfo, ClassDefinition classDefinition, StringBuilder messageBuilder)
         {
             bool violated = false;
@@ -129,7 +155,9 @@ namespace GraceFramework
 
             return violated;
         }
+        #endregion
 
+        #region Save/Load
         private void SaveViolations()
         {
             try
@@ -199,6 +227,7 @@ namespace GraceFramework
 
             return false;
         }
+        #endregion
     }
 
     [ProtoContract]

@@ -18,6 +18,8 @@ namespace GraceFramework
 {
     public partial class GridLogicSession
     {
+        private int UpdateCounter = 0;
+        private int UpdateInterval = 100;
         private enum UpdateTarget
         {
             Faction,
@@ -25,17 +27,13 @@ namespace GraceFramework
             Both
         }
 
-        private int UpdateCounter = 0;
-        private int UpdateInterval = 100;
-
+        #region Updates
         private void TrackNewGrids()
         {
             foreach (var grid in _grids.Values)
             {
                 if (HasValidBeacon(grid) && !_trackedGrids.ContainsKey(grid.EntityId))
                 {
-                    MyAPIGateway.Utilities.ShowMessage("BeforeSimulation", $"Found Grid to Track");
-
                     _trackedGrids[grid.EntityId] = new GridInfo
                     {
                         Grid = grid,
@@ -100,6 +98,36 @@ namespace GraceFramework
             }
         }
 
+        private void UpdateGridStats(GridInfo gridInfo)
+        {
+            UpdateCounter++;
+
+            if (gridInfo.Grid != null)
+            {
+                int updateCount = (int)(gridInfo.Grid.EntityId % UpdateInterval);
+
+                if (UpdateCounter % UpdateInterval == updateCount)
+                {
+                    var logic = GetBeaconLogic(gridInfo.Grid);
+                    if (logic != null)
+                    {
+                        var blockCount = new List<IMySlimBlock>();
+                        gridInfo.Grid.GetBlocks(blockCount);
+
+                        gridInfo.BlockCount = blockCount.Count;
+                        gridInfo.Mass = gridInfo.Grid.Physics?.Mass ?? 0;
+                    }
+                }
+            }
+
+            if (UpdateCounter >= int.MaxValue - UpdateInterval)
+            {
+                UpdateCounter = 0;
+            }
+        }
+        #endregion
+
+        #region Count Tracking
         private void UpdateClassCounts(long entityID, bool add, UpdateTarget target = UpdateTarget.Both)
         {
             GridInfo info;
@@ -157,6 +185,7 @@ namespace GraceFramework
                 }
             }
         }
+
         private void ShowPlayerClassCounts(long playerId)
         {
             if (!_playerClassCounts.ContainsKey(playerId))
@@ -216,33 +245,24 @@ namespace GraceFramework
 
             MyAPIGateway.Utilities.ShowNotification(messageBuilder.ToString(), 15, "White");
         }
+        #endregion
 
-        private void UpdateGridStats(GridInfo gridInfo)
+        #region Event Handlers
+        private void OnFactionCreated(long factionId)
         {
-            UpdateCounter++;
+            InitializeClassLimits(factionId, 0);
 
-            if (gridInfo.Grid != null)
+            foreach (var gridInfo in _trackedGrids.Values)
             {
-                int updateCount = (int)(gridInfo.Grid.EntityId % UpdateInterval);
+                long playerId = gridInfo.Grid.BigOwners?.FirstOrDefault() ?? 0;
+                long gridFactionId = MyAPIGateway.Session.Factions.TryGetPlayerFaction(playerId)?.FactionId ?? 0;
 
-                if (UpdateCounter % UpdateInterval == updateCount)
+                if (gridFactionId == factionId)
                 {
-                    var logic = GetBeaconLogic(gridInfo.Grid);
-                    if (logic != null)
-                    {
-                        var blockCount = new List<IMySlimBlock>();
-                        gridInfo.Grid.GetBlocks(blockCount);
-
-                        gridInfo.BlockCount = blockCount.Count;
-                        gridInfo.Mass = gridInfo.Grid.Physics?.Mass ?? 0;
-                    }
+                    UpdateClassCounts(gridInfo.Grid.EntityId, true, UpdateTarget.Faction);
                 }
             }
-
-            if (UpdateCounter >= int.MaxValue - UpdateInterval)
-            {
-                UpdateCounter = 0;
-            }
         }
+        #endregion
     }
 }
