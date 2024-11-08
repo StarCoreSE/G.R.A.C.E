@@ -13,6 +13,7 @@ using Sandbox.Game;
 using Sandbox.Game.EntityComponents;
 using static Scripts.Communication;
 using Draygo.API;
+using static GraceFramework.GridLogicSession;
 
 namespace GraceFramework
 {
@@ -64,16 +65,18 @@ namespace GraceFramework
 
                 TrackNewGrids();
 
-                UpdateTrackedGrids();             
+                UpdateTrackedGrids();
 
                 EnforceViolations();
+
+                ViolationMessage(CountMessageMode, MyAPIGateway.Session.Player.IdentityId);
             }
             catch (Exception e)
             {
-                /*MyLog.Default.WriteLineAndConsole($"{e.Message}\n{e.StackTrace}");
+                MyLog.Default.WriteLineAndConsole($"{e.Message}\n{e.StackTrace}");
 
                 if (MyAPIGateway.Session?.Player != null)
-                    MyAPIGateway.Utilities.ShowNotification($"[ ERROR: {GetType().FullName}: {e.Message} | Send SpaceEngineers.Log to mod author ]", 10000, MyFontEnum.Red);*/
+                    MyAPIGateway.Utilities.ShowNotification($"[ ERROR: {GetType().FullName}: {e.Message} | Send SpaceEngineers.Log to mod author ]", 10000, MyFontEnum.Red);
             }
         }
 
@@ -113,6 +116,9 @@ namespace GraceFramework
             if (grid == null)
                 return;
 
+            if (grid.Physics == null) 
+                return;
+
             _grids[grid.EntityId] = grid;
             grid.OnMarkForClose += GridMarkedForClose;
 
@@ -135,12 +141,17 @@ namespace GraceFramework
             if (grid.BigOwners != null && grid.BigOwners.Count > 0)
             {
                 long factionId = MyAPIGateway.Session.Factions.TryGetPlayerFaction(grid.BigOwners.First())?.FactionId ?? 0;
-                long playerId = grid.BigOwners.First();        
+                long playerId = grid.BigOwners.First();
+
+                _trackedGrids[grid.EntityId].OwnerID = playerId;
+                _trackedGrids[grid.EntityId].OwnerFactionID = factionId;
 
                 UpdateClassCounts(grid.EntityId, true);
             }
 
             grid.OnBlockAdded += Grid_OnBlockAdded;
+            grid.OnBlockRemoved += Grid_OnBlockRemoved;
+            grid.OnBlockOwnershipChanged += Grid_OnOwnershipChange;
         }
 
         private void GridMarkedForClose(IMyEntity ent)
@@ -227,6 +238,9 @@ namespace GraceFramework
     public class GridInfo
     {
         public IMyCubeGrid Grid { get; set; }
+
+        public long OwnerID { get; set; }
+        public long OwnerFactionID { get; set; }
 
         public string ClassName { get; set; }
         public long ClassKey { get; set; }

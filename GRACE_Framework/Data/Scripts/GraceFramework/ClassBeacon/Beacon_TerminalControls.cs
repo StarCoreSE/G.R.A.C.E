@@ -104,12 +104,9 @@ namespace GraceFramework
                 Dictionary<long, int> factionClassCounts;
                 GridLogicSession.Instance._factionClassCounts.TryGetValue(factionId, out factionClassCounts);
 
-                foreach (var classDef in classDefinitions)
+                if (playerClassCounts == null || factionClassCounts == null)
                 {
-                    int playerClassCount = playerClassCounts.ContainsKey(classDef.ClassKey) ? playerClassCounts[classDef.ClassKey] : 0;
-                    int factionClassCount = factionClassCounts.ContainsKey(classDef.ClassKey) ? factionClassCounts[classDef.ClassKey] : 0;
-
-                    if (playerClassCount < classDef.PerPlayerAmount && factionClassCount < classDef.PerFactionAmount)
+                    foreach (var classDef in classDefinitions)
                     {
                         list.Add(new MyTerminalControlComboBoxItem
                         {
@@ -118,6 +115,23 @@ namespace GraceFramework
                         });
                     }
                 }
+                else
+                {
+                    foreach (var classDef in classDefinitions)
+                    {
+                        int playerClassCount = playerClassCounts.TryGetValue(classDef.ClassKey, out playerClassCount) ? playerClassCount : 0;
+                        int factionClassCount = factionClassCounts.TryGetValue(classDef.ClassKey, out factionClassCount) ? factionClassCount : 0;
+
+                        if (playerClassCount < classDef.PerPlayerAmount && factionClassCount < classDef.PerFactionAmount)
+                        {
+                            list.Add(new MyTerminalControlComboBoxItem
+                            {
+                                Key = classDef.ClassKey,
+                                Value = MyStringId.GetOrCompute(classDef.ClassName)
+                            });
+                        }
+                    }
+                }            
             };
             SelectClassDropdown.SupportsMultipleBlocks = false;
             MyAPIGateway.TerminalControls.AddControl<IMyBeacon>(SelectClassDropdown);

@@ -105,6 +105,8 @@ namespace GraceFramework
                     };
 
                     grid.OnBlockAdded += Grid_OnBlockAdded;
+                    grid.OnBlockRemoved += Grid_OnBlockRemoved;
+                    grid.OnBlockOwnershipChanged += Grid_OnOwnershipChange;
                 }
             }
         }
@@ -140,6 +142,9 @@ namespace GraceFramework
                         {
                             long factionId = MyAPIGateway.Session.Factions.TryGetPlayerFaction(gridInfo.Grid.BigOwners.First())?.FactionId ?? 0;
                             long playerId = gridInfo.Grid.BigOwners.First();
+
+                            gridInfo.OwnerID = playerId;
+                            gridInfo.OwnerFactionID = factionId;
 
                             UpdateClassCounts(gridInfo.Grid.EntityId, true);
 
@@ -196,31 +201,32 @@ namespace GraceFramework
         private void UpdateClassCounts(long entityID, bool add, UpdateTarget target = UpdateTarget.Both)
         {
             GridInfo info;
-            _trackedGrids.TryGetValue(entityID, out info);
+            if (!_trackedGrids.TryGetValue(entityID, out info))
+                return;
 
-            long playerId = info?.Grid?.BigOwners?.First() ?? 0;
+            long playerId = (info?.Grid?.BigOwners != null && info.Grid.BigOwners.Count > 0) ? info.Grid.BigOwners.First() : 0;
             long factionId = MyAPIGateway.Session.Factions.TryGetPlayerFaction(playerId)?.FactionId ?? 0;
             long classKey = info?.ClassKey ?? 0;
 
+            if (playerId == 0 || factionId == 0 || classKey == 0)
+                return;
+
             InitializeClassLimits(factionId, playerId);
 
-            if (classKey != 0)
+            if (target == UpdateTarget.Faction || target == UpdateTarget.Both)
             {
-                if (target == UpdateTarget.Faction || target == UpdateTarget.Both)
-                {
-                    if (add)
-                        _factionClassCounts[factionId][classKey]++;
-                    else
-                        _factionClassCounts[factionId][classKey] = Math.Max(0, _factionClassCounts[factionId][classKey] - 1);
-                }
+                if (add)
+                    _factionClassCounts[factionId][classKey]++;
+                else
+                    _factionClassCounts[factionId][classKey] = Math.Max(0, _factionClassCounts[factionId][classKey] - 1);
+            }
 
-                if (target == UpdateTarget.Player || target == UpdateTarget.Both)
-                {
-                    if (add)
-                        _playerClassCounts[playerId][classKey]++;
-                    else
-                        _playerClassCounts[playerId][classKey] = Math.Max(0, _playerClassCounts[playerId][classKey] - 1);
-                }
+            if (target == UpdateTarget.Player || target == UpdateTarget.Both)
+            {
+                if (add)
+                    _playerClassCounts[playerId][classKey]++;
+                else
+                    _playerClassCounts[playerId][classKey] = Math.Max(0, _playerClassCounts[playerId][classKey] - 1);
             }
         }
 
@@ -249,7 +255,7 @@ namespace GraceFramework
                     _playerClassCounts[playerId][classDef.Key] = 0;
                 }
             }
-        }
+        }   
 
         private void ShowClassCounts(long Id, DisplayMode displayMode)
         {
@@ -352,6 +358,59 @@ namespace GraceFramework
                     UpdateClassCounts(gridInfo.Grid.EntityId, true, UpdateTarget.Faction);
                 }
             }
+        }
+
+        private void Grid_OnOwnershipChange(IMyCubeGrid grid)
+        {
+            GridInfo gridInfo;
+            if (!_trackedGrids.TryGetValue(grid.EntityId, out gridInfo) || gridInfo.ClassKey == 0)
+                return;
+
+            long currentPlayerId = gridInfo.Grid.BigOwners.Count > 0 ? gridInfo.Grid.BigOwners.First() : 0;
+            long currentFactionId = MyAPIGateway.Session.Factions.TryGetPlayerFaction(currentPlayerId)?.FactionId ?? 0;
+
+            bool playerChanged = currentPlayerId != gridInfo.OwnerID;
+            bool factionChanged = currentFactionId != gridInfo.OwnerFactionID;
+
+            if (!playerChanged && !factionChanged)
+                return;
+
+            if (playerChanged && gridInfo.OwnerID != 0)
+            {
+                _playerClassCounts[gridInfo.OwnerID][gridInfo.ClassKey] =
+                    Math.Max(0, _playerClassCounts[gridInfo.OwnerID][gridInfo.ClassKey] - 1);
+            }
+
+            if (factionChanged && gridInfo.OwnerFactionID != 0)
+            {
+                _factionClassCounts[gridInfo.OwnerFactionID][gridInfo.ClassKey] =
+                    Math.Max(0, _factionClassCounts[gridInfo.OwnerFactionID][gridInfo.ClassKey] - 1);
+            }
+
+            if (playerChanged)
+            {
+                if (!_playerClassCounts.ContainsKey(currentPlayerId))
+                    _playerClassCounts[currentPlayerId] = new Dictionary<long, int>();
+
+                if (!_playerClassCounts[currentPlayerId].ContainsKey(gridInfo.ClassKey))
+                    _playerClassCounts[currentPlayerId][gridInfo.ClassKey] = 0;
+
+                _playerClassCounts[currentPlayerId][gridInfo.ClassKey]++;
+            }
+
+            if (factionChanged)
+            {
+                if (!_factionClassCounts.ContainsKey(currentFactionId))
+                    _factionClassCounts[currentFactionId] = new Dictionary<long, int>();
+
+                if (!_factionClassCounts[currentFactionId].ContainsKey(gridInfo.ClassKey))
+                    _factionClassCounts[currentFactionId][gridInfo.ClassKey] = 0;
+
+                _factionClassCounts[currentFactionId][gridInfo.ClassKey]++;
+            }
+
+            gridInfo.OwnerID = currentPlayerId;
+            gridInfo.OwnerFactionID = currentFactionId;
         }
 
         private void HandleKeyInputs()

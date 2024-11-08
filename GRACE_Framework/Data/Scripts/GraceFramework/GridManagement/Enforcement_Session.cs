@@ -30,7 +30,7 @@ namespace GraceFramework
             if (fatBlock == null)
                 return;
 
-            var classBeacon = fatBlock.CubeGrid.GetFatBlocks<IMyBeacon>().Where(b => b.BlockDefinition.SubtypeName == "LargeBlockBeacon").First();
+            var classBeacon = fatBlock.CubeGrid.GetFatBlocks<IMyBeacon>().Where(b => b.BlockDefinition.SubtypeName == "LargeBlockBeacon").FirstOrDefault();
             if (classBeacon != null)
             {
                 var beaconLogic = ClassBeacon.GetLogic<ClassBeacon>(classBeacon.EntityId);
@@ -49,9 +49,34 @@ namespace GraceFramework
             }
         }
 
+        private void Grid_OnBlockRemoved(IMySlimBlock block)
+        {
+            var fatBlock = block?.FatBlock;
+            if (fatBlock == null || fatBlock.BlockDefinition.SubtypeName != "LargeBlockBeacon") 
+                return;
+
+            var grid = block?.CubeGrid;
+            if (grid == null)
+                return;
+
+            GridInfo info;
+            if (_trackedGrids.TryGetValue(grid.EntityId, out info))
+            {
+                if (info.ClassKey != 0)
+                {
+                    UpdateClassCounts(grid.EntityId, false);
+                    info = null;
+                }
+
+                _gridsInViolation.Remove(grid.EntityId);
+                _trackedGrids.Remove(grid.EntityId);
+            }
+        }
+
         private void DisplayViolationMission()
         {
-            MyAPIGateway.Utilities.ShowMissionScreen("Class Violations", "", "", violationMessage.ToString());
+            var title = CountMessageMode == DisplayMode.Player ? "Player Grid Violations" : "Faction Grid Violations";
+            MyAPIGateway.Utilities.ShowMissionScreen(title, "", "Grids in Violation will be Deleted on Unload/Restart", violationMessage.ToString());
             ShowViolationMission = false;
         }
         #endregion
@@ -79,34 +104,24 @@ namespace GraceFramework
 
         private void EnforceViolations()
         {
-            if (violationMessage == null)
-            {
-                violationMessage = new StringBuilder();
-            }
-            violationMessage.Clear();
-
             foreach (var gridInfo in _trackedGrids.Values)
             {
-                violationMessage.Append($"{gridInfo.Grid.DisplayName} Violated Class Rules! \n");
-
                 ClassDefinition classDefinition;
                 if (_classDefinitions.TryGetValue(gridInfo.ClassKey, out classDefinition))
                 {
                     bool violationFound = false;
 
-                    if (CheckClassLimits(gridInfo, classDefinition, violationMessage))
+                    if (CheckClassLimits(gridInfo, classDefinition, null))
                         violationFound = true;
 
-                    if (CheckBlockCount(gridInfo, classDefinition, violationMessage))
+                    if (CheckBlockCount(gridInfo, classDefinition, null))
                         violationFound = true;
 
-                    if (CheckMass(gridInfo, classDefinition, violationMessage))
+                    if (CheckMass(gridInfo, classDefinition, null))
                         violationFound = true;
 
-                    if (CheckBlacklist(gridInfo, classDefinition, violationMessage))
+                    if (CheckBlacklist(gridInfo, classDefinition, null))
                         violationFound = true;
-
-                    violationMessage.Append('\n');
 
                     if (violationFound)
                     {
@@ -121,6 +136,53 @@ namespace GraceFramework
                 }
             }
         }
+
+        private void ViolationMessage(DisplayMode displayMode, long playerId)
+        {
+            if (violationMessage == null)
+            {
+                violationMessage = new StringBuilder();
+            }
+            violationMessage.Clear();
+
+            foreach (var gridInfo in _trackedGrids.Values)
+            {
+                if (!_gridsInViolation.ContainsKey(gridInfo.Grid.EntityId))
+                    continue;
+
+                bool includeGrid = displayMode == DisplayMode.Player
+                    ? gridInfo.OwnerID == playerId 
+                    : MyAPIGateway.Session.Factions.TryGetPlayerFaction(playerId).FactionId == MyAPIGateway.Session.Factions.TryGetPlayerFaction(gridInfo.OwnerID).FactionId;
+
+                if (!includeGrid)
+                    continue;
+
+                if (displayMode == DisplayMode.Faction)
+                {
+                    var ownerName = MyAPIGateway.Players.TryGetIdentityId(gridInfo.OwnerID)?.DisplayName;
+                    violationMessage.Append($"{gridInfo.Grid.DisplayName} (Owned By: {ownerName}) Violated Class Rules!\n");
+                }
+                else
+                {
+                    violationMessage.Append($"{gridInfo.Grid.DisplayName} Violated Class Rules!\n");
+                }
+
+                ClassDefinition classDefinition;
+                if (_classDefinitions.TryGetValue(gridInfo.ClassKey, out classDefinition))
+                {
+
+                    CheckClassLimits(gridInfo, classDefinition, violationMessage);
+
+                    CheckBlockCount(gridInfo, classDefinition, violationMessage);
+
+                    CheckMass(gridInfo, classDefinition, violationMessage);
+
+                    CheckBlacklist(gridInfo, classDefinition, violationMessage);
+
+                    violationMessage.Append('\n');
+                }
+            }
+        }
         #endregion
 
         #region Helpers
@@ -131,9 +193,11 @@ namespace GraceFramework
             int playerClassCount = _playerClassCounts[gridInfo.Grid.BigOwners.First()][gridInfo.ClassKey];
             int factionClassCount = _factionClassCounts[MyAPIGateway.Session.Factions.TryGetPlayerFaction(gridInfo.Grid.BigOwners.First()).FactionId][gridInfo.ClassKey];
 
-            if (playerClassCount >= classDefinition.PerPlayerAmount || factionClassCount >= classDefinition.PerFactionAmount)
+            if (playerClassCount > classDefinition.PerPlayerAmount || factionClassCount > classDefinition.PerFactionAmount)
             {
-                messageBuilder.Append($" - [Limit Exceeded for Grids of Class {gridInfo.ClassName}] \n");
+                if (messageBuilder != null)
+                    messageBuilder.Append($" - [Limit Exceeded for Grids of Class {gridInfo.ClassName}] \n");
+
                 violated = true;
             }
 
@@ -146,12 +210,16 @@ namespace GraceFramework
 
             if (gridInfo.BlockCount > classDefinition.MaxBlockCount)
             {
-                messageBuilder.Append(" - [Maximum Block Count Exceeded!] \n" + $"    Current: {gridInfo.BlockCount:N0}\n    Max: {classDefinition.MaxBlockCount:N0}\n");
+                if (messageBuilder != null)
+                    messageBuilder.Append(" - [Maximum Block Count Exceeded!] \n" + $"    Current: {gridInfo.BlockCount:N0}\n    Max: {classDefinition.MaxBlockCount:N0}\n");
+                
                 violated = true;
             }
             else if (gridInfo.BlockCount < classDefinition.MinBlockCount)
             {
-                messageBuilder.Append(" - [Minimum Block Count Not Met!] \n" + $"    Current: {gridInfo.BlockCount:N0}\n    Min: {classDefinition.MinBlockCount:N0}\n");
+                if (messageBuilder != null)
+                    messageBuilder.Append(" - [Minimum Block Count Not Met!] \n" + $"    Current: {gridInfo.BlockCount:N0}\n    Min: {classDefinition.MinBlockCount:N0}\n");
+                
                 violated = true;
             }
 
@@ -164,12 +232,16 @@ namespace GraceFramework
 
             if (gridInfo.Mass > classDefinition.MaxClassWeight)
             {
-                messageBuilder.Append(" - [Maximum Weight Exceeded!] \n" + $"    Current: {gridInfo.Mass:N0}\n    Max: {classDefinition.MaxClassWeight:N0}\n");
+                if (messageBuilder != null)
+                    messageBuilder.Append(" - [Maximum Weight Exceeded!] \n" + $"    Current: {gridInfo.Mass:N0}\n    Max: {classDefinition.MaxClassWeight:N0}\n");
+                
                 violated = true;
             }
             else if (gridInfo.Mass < classDefinition.MinClassWeight)
             {
-                messageBuilder.Append(" - [Minimum Weight Not Met!] \n" + $"    Current: {gridInfo.Mass:N0}\n    Min: {classDefinition.MinClassWeight:N0}\n");
+                if (messageBuilder != null)
+                    messageBuilder.Append(" - [Minimum Weight Not Met!] \n" + $"    Current: {gridInfo.Mass:N0}\n    Min: {classDefinition.MinClassWeight:N0}\n");
+                
                 violated = true;
             }
 
@@ -183,7 +255,9 @@ namespace GraceFramework
             var functionalBlocks = gridInfo.Grid.GetFatBlocks<IMyFunctionalBlock>();
             if (functionalBlocks.Any(block => classDefinition.BlacklistedBlocks.Contains(block.BlockDefinition.SubtypeName)))
             {
-                messageBuilder.Append(" - [Grid Has Blacklisted Blocks!] \n");
+                if (messageBuilder != null)
+                    messageBuilder.Append(" - [Grid Has Blacklisted Blocks!] \n");
+                
                 violated = true;
             }
 
