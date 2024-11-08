@@ -96,13 +96,27 @@ namespace GraceFramework
                 list.Add(new MyTerminalControlComboBoxItem { Key = 0, Value = MyStringId.GetOrCompute("None") });
 
                 var classDefinitions = GridLogicSession.GetClassDefinitions();
+                var playerId = MyAPIGateway.Session?.Player?.IdentityId ?? 0;
+                var factionId = MyAPIGateway.Session?.Factions.TryGetPlayerFaction(playerId)?.FactionId ?? 0;
+
+                Dictionary<long, int> playerClassCounts;
+                GridLogicSession.Instance._playerClassCounts.TryGetValue(playerId, out playerClassCounts);
+                Dictionary<long, int> factionClassCounts;
+                GridLogicSession.Instance._factionClassCounts.TryGetValue(factionId, out factionClassCounts);
+
                 foreach (var classDef in classDefinitions)
                 {
-                    list.Add(new MyTerminalControlComboBoxItem
+                    int playerClassCount = playerClassCounts.ContainsKey(classDef.ClassKey) ? playerClassCounts[classDef.ClassKey] : 0;
+                    int factionClassCount = factionClassCounts.ContainsKey(classDef.ClassKey) ? factionClassCounts[classDef.ClassKey] : 0;
+
+                    if (playerClassCount < classDef.PerPlayerAmount && factionClassCount < classDef.PerFactionAmount)
                     {
-                        Key = classDef.ClassKey,
-                        Value = MyStringId.GetOrCompute(classDef.ClassName)
-                    });
+                        list.Add(new MyTerminalControlComboBoxItem
+                        {
+                            Key = classDef.ClassKey,
+                            Value = MyStringId.GetOrCompute(classDef.ClassName)
+                        });
+                    }
                 }
             };
             SelectClassDropdown.SupportsMultipleBlocks = false;

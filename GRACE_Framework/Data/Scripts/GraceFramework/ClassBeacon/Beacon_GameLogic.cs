@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Collections.Generic;
 using ProtoBuf;
 using Sandbox.Common.ObjectBuilders;
 using Sandbox.Game.EntityComponents;
@@ -11,6 +13,7 @@ using VRage.Game.ObjectBuilders.ComponentSystem;
 using VRage.ModAPI;
 using VRage.ObjectBuilders;
 using VRage.Sync;
+using static Scripts.Structure;
 
 namespace GraceFramework
 {
@@ -57,7 +60,7 @@ namespace GraceFramework
                 return;
             }
 
-            LoadSettings();
+            LoadSettings();            
 
             ClassName.ValueChanged += OnVariableChangeString;
             ClassKey.ValueChanged += OnVariableChangeLong;
@@ -189,7 +192,7 @@ namespace GraceFramework
     public class BeaconSettings
     {
         [ProtoMember(21)]
-        public string? Stored_ClassName { get; set; }
+        public string Stored_ClassName { get; set; }
 
         [ProtoMember(22)]
         public long Stored_ClassKey { get; set; }

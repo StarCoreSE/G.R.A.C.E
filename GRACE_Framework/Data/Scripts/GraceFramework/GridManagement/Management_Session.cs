@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Draygo.API;
 using Microsoft.VisualBasic;
 using Sandbox.Game;
 using Sandbox.ModAPI;
@@ -10,16 +11,17 @@ using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
 using VRage.Game.VisualScripting;
+using VRage.Input;
 using VRage.ModAPI;
 using VRage.Utils;
+using VRageMath;
 using static Scripts.Structure;
+using static VRageRender.MyBillboard;
 
 namespace GraceFramework
 {
     public partial class GridLogicSession
     {
-        private int UpdateCounter = 0;
-        private int UpdateInterval = 100;
         private enum UpdateTarget
         {
             Faction,
@@ -27,7 +29,70 @@ namespace GraceFramework
             Both
         }
 
+        public enum DisplayMode
+        {
+            None = 0,
+            Player = 1,
+            Faction = 2
+        }
+
+        private int UpdateCounter = 0;
+        private int UpdateInterval = 100;
+
+        Vector2D textPositionDefault = new Vector2D(-1, 1);
+        const double textScaleDefault = 1;
+        const string textFontDefault = "white";
+        const bool textFontShadowDefault = false;
+        HudAPIv2.HUDMessage CountHUDMessage;
+        StringBuilder HUDMessageContent = null;
+
+        public static DisplayMode CountMessageMode = DisplayMode.Player; 
+
+        private readonly Dictionary<MyKeys, Action> _keyAndActionPairs = new Dictionary<MyKeys, Action>
+        {
+            [MyKeys.U] = () =>
+            {
+                CountMessageMode++;
+                if (CountMessageMode > (DisplayMode)2)
+                    CountMessageMode = 0;
+                MyAPIGateway.Utilities.ShowNotification(
+                    "GridCount Display Mode set to " + CountMessageMode);
+            },
+            [MyKeys.I] = () =>
+            {
+                ShowViolationMission = true;
+            },
+        };
+
         #region Updates
+        private void HandleHUDMessage()
+        {
+            HandleKeyInputs();
+
+            if (CountMessageMode == 0)
+            {
+                PurgeHUDMessage();
+                return;
+            }
+            else if (CountMessageMode == (DisplayMode)1)
+            {
+                List<IMyPlayer> players = new List<IMyPlayer>();
+                MyAPIGateway.Players.GetPlayers(players);
+                foreach (var player in players)
+                {
+                    ShowClassCounts(player.IdentityId, CountMessageMode);
+                }
+            }
+            else if (CountMessageMode == (DisplayMode)2)
+            {
+                List<IMyFaction> factions = new List<IMyFaction>();
+                foreach (var faction in MyAPIGateway.Session.Factions.Factions.Where(faction => !faction.Value.IsEveryoneNpc()))
+                {
+                    ShowClassCounts(faction.Key, CountMessageMode);
+                }
+            }
+        }
+
         private void TrackNewGrids()
         {
             foreach (var grid in _grids.Values)
@@ -186,64 +251,89 @@ namespace GraceFramework
             }
         }
 
-        private void ShowPlayerClassCounts(long playerId)
+        private void ShowClassCounts(long Id, DisplayMode displayMode)
         {
-            if (!_playerClassCounts.ContainsKey(playerId))
+            if (HUDMessageContent == null)
             {
-                MyAPIGateway.Utilities.ShowNotification($"No tracked classes for Player {MyAPIGateway.Players.TryGetIdentityId(playerId).DisplayName}", 15, "White");
-                return;
+                HUDMessageContent = new StringBuilder();
             }
+            HUDMessageContent.Clear();
 
-            var counts = _playerClassCounts[playerId];
-            var messageBuilder = new System.Text.StringBuilder($"{MyAPIGateway.Players.TryGetIdentityId(playerId).DisplayName} Grids: ");
+            var selectedDict = displayMode == DisplayMode.Player ? _playerClassCounts : _factionClassCounts;
+            string entityName = displayMode == DisplayMode.Player 
+                ? MyAPIGateway.Players.TryGetIdentityId(Id).DisplayName 
+                : MyAPIGateway.Session.Factions.TryGetFactionById(Id).Tag;
 
-            foreach (var classEntry in counts)
+            if (!selectedDict.ContainsKey(Id) || selectedDict[Id].All(kvp => kvp.Value == 0))
             {
-                long classKey = classEntry.Key;
-                int count = classEntry.Value;
+                HUDMessageContent.Append($"No tracked classes for {(displayMode == DisplayMode.Player ? "Player" : "Faction")} {entityName} \n");
+            }
+            else
+            {
+                HUDMessageContent.Append($"{entityName} Grids: \n");
 
-                ClassDefinition classDefinition;
-                if (_classDefinitions.TryGetValue(classKey, out classDefinition))
+                var counts = selectedDict[Id];
+                foreach (var classEntry in counts)
                 {
-                    messageBuilder.Append($"[{classDefinition.ClassName}] {count}/{classDefinition.PerPlayerAmount}, ");
-                }
+                    long classKey = classEntry.Key;
+                    int count = classEntry.Value;
 
+                    ClassDefinition classDefinition;
+                    if (_classDefinitions.TryGetValue(classKey, out classDefinition))
+                    {
+                        int maxCount = displayMode == DisplayMode.Player ? classDefinition.PerPlayerAmount : classDefinition.PerFactionAmount;
+                        HUDMessageContent.Append($"[{classDefinition.ClassName}] {count}/{maxCount} \n");
+                    }
+                }
             }
 
-            if (messageBuilder.Length > 0)
-                messageBuilder.Length -= 2;
+            HUDMessageContent.Append("<color=yellow>Press 'Shift + U' To Cycle Display \n");
 
-            MyAPIGateway.Utilities.ShowNotification(messageBuilder.ToString(), 15, "White");
+            if (displayMode == DisplayMode.Player)
+            {
+                bool playerHasViolatingGrids = _gridsInViolation.Any(kvp => kvp.Value.BigOwners.Contains(Id));
+                if (playerHasViolatingGrids)
+                {
+                    HUDMessageContent.Append("<color=red>Player Grids Violating Class Rules! \nPress 'Shift + I' For Info!");
+                }
+            }
+            else if (displayMode == DisplayMode.Faction)
+            {
+                bool factionHasViolatingGrids = _gridsInViolation.Any(kvp =>
+                    kvp.Value.BigOwners.Any(owner => MyAPIGateway.Session.Factions.TryGetPlayerFaction(owner)?.FactionId == Id)
+                );
+                if (factionHasViolatingGrids)
+                {
+                    HUDMessageContent.Append("<color=red>Faction Grids Violating Class Rules! \nPress 'Shift + I' For Info!");
+                }
+            }
+
+            if (CountHUDMessage == null)
+            {
+                CountHUDMessage = new HudAPIv2.HUDMessage
+                (
+                    Message: HUDMessageContent,
+                    Origin: textPositionDefault,
+                    Offset: null,
+                    TimeToLive: -1,
+                    Scale: textScaleDefault,
+                    HideHud: false,
+                    Shadowing: textFontShadowDefault,
+                    ShadowColor: Color.Black,
+                    Blend: BlendTypeEnum.PostPP,
+                    Font: textFontDefault
+                );
+            }
         }
 
-        private void ShowFactionClassCounts(long factionId)
+        private void PurgeHUDMessage()
         {
-            if (!_factionClassCounts.ContainsKey(factionId))
+            if (CountHUDMessage != null)
             {
-                MyAPIGateway.Utilities.ShowNotification($"No tracked classes for Faction {MyAPIGateway.Session.Factions.TryGetFactionById(factionId).Tag}", 15, "White");
-                return;
+                CountHUDMessage.Visible = false;
+                CountHUDMessage.DeleteMessage();
+                CountHUDMessage = null;
             }
-
-            var counts = _factionClassCounts[factionId];
-            var messageBuilder = new System.Text.StringBuilder($"{MyAPIGateway.Session.Factions.TryGetFactionById(factionId).Tag} Grids: ");
-
-            foreach (var classEntry in counts)
-            {
-                long classKey = classEntry.Key;
-                int count = classEntry.Value;
-
-                ClassDefinition classDefinition;
-                if (_classDefinitions.TryGetValue(classKey, out classDefinition))
-                {
-                    messageBuilder.Append($"[{classDefinition.ClassName}] {count}/{classDefinition.PerFactionAmount}, ");
-                }
-
-            }
-
-            if (messageBuilder.Length > 0)
-                messageBuilder.Length -= 2;
-
-            MyAPIGateway.Utilities.ShowNotification(messageBuilder.ToString(), 15, "White");
         }
         #endregion
 
@@ -262,6 +352,16 @@ namespace GraceFramework
                     UpdateClassCounts(gridInfo.Grid.EntityId, true, UpdateTarget.Faction);
                 }
             }
+        }
+
+        private void HandleKeyInputs()
+        {
+            if (!MyAPIGateway.Input.IsAnyShiftKeyPressed())
+                return;
+
+            foreach (var pair in _keyAndActionPairs)
+                if (MyAPIGateway.Input.IsNewKeyPressed(pair.Key))
+                    pair.Value.Invoke();
         }
         #endregion
     }

@@ -17,8 +17,11 @@ namespace GraceFramework
 {
     public partial class GridLogicSession
     {
-        public Dictionary<long, IMyCubeGrid> _gridsInViolation = new Dictionary<long, IMyCubeGrid>();
+        public Dictionary<long, IMyCubeGrid> _gridsInViolation = new Dictionary<long, IMyCubeGrid>(); // EntityID + Grid
         private bool _clearedViolations;
+
+        private StringBuilder violationMessage;
+        private static bool ShowViolationMission;
 
         #region Event Handlers
         private void Grid_OnBlockAdded(IMySlimBlock block)
@@ -45,6 +48,12 @@ namespace GraceFramework
                 }
             }
         }
+
+        private void DisplayViolationMission()
+        {
+            MyAPIGateway.Utilities.ShowMissionScreen("Class Violations", "", "", violationMessage.ToString());
+            ShowViolationMission = false;
+        }
         #endregion
 
         #region Updates
@@ -70,30 +79,39 @@ namespace GraceFramework
 
         private void EnforceViolations()
         {
+            if (violationMessage == null)
+            {
+                violationMessage = new StringBuilder();
+            }
+            violationMessage.Clear();
+
             foreach (var gridInfo in _trackedGrids.Values)
             {
-                var messageBuilder = new StringBuilder($"Grid {gridInfo.Grid.DisplayName} Violated Class Rules! For:");
+                violationMessage.Append($"{gridInfo.Grid.DisplayName} Violated Class Rules! \n");
 
                 ClassDefinition classDefinition;
                 if (_classDefinitions.TryGetValue(gridInfo.ClassKey, out classDefinition))
                 {
                     bool violationFound = false;
 
-                    if (CheckBlockCount(gridInfo, classDefinition, messageBuilder))
+                    if (CheckClassLimits(gridInfo, classDefinition, violationMessage))
                         violationFound = true;
 
-                    if (CheckMass(gridInfo, classDefinition, messageBuilder))
+                    if (CheckBlockCount(gridInfo, classDefinition, violationMessage))
                         violationFound = true;
 
-                    if (CheckBlacklist(gridInfo, classDefinition, messageBuilder))
+                    if (CheckMass(gridInfo, classDefinition, violationMessage))
                         violationFound = true;
+
+                    if (CheckBlacklist(gridInfo, classDefinition, violationMessage))
+                        violationFound = true;
+
+                    violationMessage.Append('\n');
 
                     if (violationFound)
                     {
                         if (!_gridsInViolation.ContainsKey(gridInfo.Grid.EntityId))
                             _gridsInViolation.Add(gridInfo.Grid.EntityId, gridInfo.Grid);
-
-                        MyAPIGateway.Utilities.ShowNotification(messageBuilder.ToString(), 15, "Red");
                     }
                     else
                     {
@@ -106,18 +124,34 @@ namespace GraceFramework
         #endregion
 
         #region Helpers
+        private bool CheckClassLimits(GridInfo gridInfo, ClassDefinition classDefinition, StringBuilder messageBuilder)
+        {
+            bool violated = false;
+
+            int playerClassCount = _playerClassCounts[gridInfo.Grid.BigOwners.First()][gridInfo.ClassKey];
+            int factionClassCount = _factionClassCounts[MyAPIGateway.Session.Factions.TryGetPlayerFaction(gridInfo.Grid.BigOwners.First()).FactionId][gridInfo.ClassKey];
+
+            if (playerClassCount >= classDefinition.PerPlayerAmount || factionClassCount >= classDefinition.PerFactionAmount)
+            {
+                messageBuilder.Append($" - [Limit Exceeded for Grids of Class {gridInfo.ClassName}] \n");
+                violated = true;
+            }
+
+            return violated;
+        }
+
         private bool CheckBlockCount(GridInfo gridInfo, ClassDefinition classDefinition, StringBuilder messageBuilder)
         {
             bool violated = false;
 
             if (gridInfo.BlockCount > classDefinition.MaxBlockCount)
             {
-                messageBuilder.Append(" [Maximum Block Count Exceeded!]");
+                messageBuilder.Append(" - [Maximum Block Count Exceeded!] \n" + $"    Current: {gridInfo.BlockCount:N0}\n    Max: {classDefinition.MaxBlockCount:N0}\n");
                 violated = true;
             }
             else if (gridInfo.BlockCount < classDefinition.MinBlockCount)
             {
-                messageBuilder.Append(" [Minimum Block Count Not Met!]");
+                messageBuilder.Append(" - [Minimum Block Count Not Met!] \n" + $"    Current: {gridInfo.BlockCount:N0}\n    Min: {classDefinition.MinBlockCount:N0}\n");
                 violated = true;
             }
 
@@ -130,12 +164,12 @@ namespace GraceFramework
 
             if (gridInfo.Mass > classDefinition.MaxClassWeight)
             {
-                messageBuilder.Append(" [Maximum Weight Exceeded!]");
+                messageBuilder.Append(" - [Maximum Weight Exceeded!] \n" + $"    Current: {gridInfo.Mass:N0}\n    Max: {classDefinition.MaxClassWeight:N0}\n");
                 violated = true;
             }
             else if (gridInfo.Mass < classDefinition.MinClassWeight)
             {
-                messageBuilder.Append(" [Minimum Weight Not Met!]");
+                messageBuilder.Append(" - [Minimum Weight Not Met!] \n" + $"    Current: {gridInfo.Mass:N0}\n    Min: {classDefinition.MinClassWeight:N0}\n");
                 violated = true;
             }
 
@@ -149,7 +183,7 @@ namespace GraceFramework
             var functionalBlocks = gridInfo.Grid.GetFatBlocks<IMyFunctionalBlock>();
             if (functionalBlocks.Any(block => classDefinition.BlacklistedBlocks.Contains(block.BlockDefinition.SubtypeName)))
             {
-                messageBuilder.Append(" [Grid Has Blacklisted Blocks!]");
+                messageBuilder.Append(" - [Grid Has Blacklisted Blocks!] \n");
                 violated = true;
             }
 

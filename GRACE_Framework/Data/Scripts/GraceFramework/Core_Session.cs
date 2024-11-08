@@ -12,6 +12,7 @@ using static Scripts.Structure;
 using Sandbox.Game;
 using Sandbox.Game.EntityComponents;
 using static Scripts.Communication;
+using Draygo.API;
 
 namespace GraceFramework
 {
@@ -19,6 +20,12 @@ namespace GraceFramework
     public partial class GridLogicSession : MySessionComponentBase
     {
         public static GridLogicSession Instance;
+
+        static HudAPIv2 textAPI = null;
+        static bool textAPIAlive;
+        public static bool IsInit => textAPI != null;
+        public static bool IsAPIAlive => textAPI != null && textAPI.Heartbeat;
+
 
         public Dictionary<long, IMyCubeGrid> _grids = new Dictionary<long, IMyCubeGrid>(); // EntityID, Grid
         public Dictionary<long, GridInfo> _trackedGrids = new Dictionary<long, GridInfo>(); // EntityID, GridInfo
@@ -29,6 +36,15 @@ namespace GraceFramework
         public Dictionary<long, ClassDefinition> _classDefinitions = new Dictionary<long, ClassDefinition>(); // ClassKey, ClassDefinition
 
         #region Overrides
+        public override void BeforeStart()
+        {
+            textAPI = new HudAPIv2();
+            if (textAPI.Heartbeat)
+            {
+                textAPIAlive = true;
+            }
+        }
+
         public override void LoadData()
         {
             Instance = this;
@@ -48,29 +64,28 @@ namespace GraceFramework
 
                 TrackNewGrids();
 
-                UpdateTrackedGrids();
-
-                List<IMyPlayer> players = new List<IMyPlayer>();
-                MyAPIGateway.Players.GetPlayers(players);
-                foreach (var player in players)
-                {
-                    ShowPlayerClassCounts(player.IdentityId);
-                }
-
-                List<IMyFaction> factions = new List<IMyFaction>();
-                foreach (var faction in MyAPIGateway.Session.Factions.Factions.Where(faction => !faction.Value.IsEveryoneNpc()))
-                {
-                    ShowFactionClassCounts(faction.Key);
-                }
+                UpdateTrackedGrids();             
 
                 EnforceViolations();
             }
             catch (Exception e)
             {
-                MyLog.Default.WriteLineAndConsole($"{e.Message}\n{e.StackTrace}");
+                /*MyLog.Default.WriteLineAndConsole($"{e.Message}\n{e.StackTrace}");
 
                 if (MyAPIGateway.Session?.Player != null)
-                    MyAPIGateway.Utilities.ShowNotification($"[ ERROR: {GetType().FullName}: {e.Message} | Send SpaceEngineers.Log to mod author ]", 10000, MyFontEnum.Red);
+                    MyAPIGateway.Utilities.ShowNotification($"[ ERROR: {GetType().FullName}: {e.Message} | Send SpaceEngineers.Log to mod author ]", 10000, MyFontEnum.Red);*/
+            }
+        }
+
+        public override void Draw()
+        {
+            base.Draw();
+
+            HandleHUDMessage();
+
+            if (ShowViolationMission)
+            {
+                DisplayViolationMission();
             }
         }
 
@@ -81,6 +96,8 @@ namespace GraceFramework
             MyAPIGateway.Session.Factions.FactionCreated -= OnFactionCreated;
 
             MyAPIGateway.Entities.OnEntityAdd -= EntityAdded;
+
+            PurgeHUDMessage();
 
             SaveViolations();
 
@@ -118,7 +135,7 @@ namespace GraceFramework
             if (grid.BigOwners != null && grid.BigOwners.Count > 0)
             {
                 long factionId = MyAPIGateway.Session.Factions.TryGetPlayerFaction(grid.BigOwners.First())?.FactionId ?? 0;
-                long playerId = grid.BigOwners.First();
+                long playerId = grid.BigOwners.First();        
 
                 UpdateClassCounts(grid.EntityId, true);
             }
@@ -142,6 +159,9 @@ namespace GraceFramework
                     UpdateClassCounts(grid.EntityId, false);
                     info = null;
                 }
+
+                if (_gridsInViolation.ContainsKey(grid.EntityId))
+                    _gridsInViolation.Remove(grid.EntityId);
 
                 _trackedGrids.Remove(grid.EntityId);
             }

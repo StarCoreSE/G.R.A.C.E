@@ -3,14 +3,6 @@
   "WorkspaceRootPath": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|c:\\users\\chet\\appdata\\roaming\\spaceengineers\\mods\\grace_framework\\data\\scripts\\graceframework\\core_session.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|solutionrelative:core_session.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|c:\\users\\chet\\appdata\\roaming\\spaceengineers\\mods\\grace_framework\\data\\scripts\\graceframework\\classbeacon\\beacon_terminalcontrols.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|solutionrelative:classbeacon\\beacon_terminalcontrols.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|c:\\users\\chet\\appdata\\roaming\\spaceengineers\\mods\\grace_framework\\data\\scripts\\graceframework\\gridmanagement\\management_session.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|solutionrelative:gridmanagement\\management_session.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -19,8 +11,16 @@
       "RelativeMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|solutionrelative:gridmanagement\\enforcement_session.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|c:\\users\\chet\\appdata\\roaming\\spaceengineers\\mods\\grace_framework\\data\\scripts\\graceframework\\core_session.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|solutionrelative:core_session.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|c:\\users\\chet\\appdata\\roaming\\spaceengineers\\mods\\grace_framework\\data\\scripts\\graceframework\\classbeacon\\beacon_gamelogic.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|solutionrelative:classbeacon\\beacon_gamelogic.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|c:\\users\\chet\\appdata\\roaming\\spaceengineers\\mods\\grace_framework\\data\\scripts\\graceframework\\classbeacon\\beacon_terminalcontrols.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F4D09BE3-ED13-4E69-B3FA-403CDABEB01E}|GraceFramework.csproj|solutionrelative:classbeacon\\beacon_terminalcontrols.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -30,56 +30,30 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "Beacon_GameLogic.cs",
-              "DocumentMoniker": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\ClassBeacon\\Beacon_GameLogic.cs",
-              "RelativeDocumentMoniker": "ClassBeacon\\Beacon_GameLogic.cs",
-              "ToolTip": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\ClassBeacon\\Beacon_GameLogic.cs",
-              "RelativeToolTip": "ClassBeacon\\Beacon_GameLogic.cs",
-              "ViewState": "AgIAAEEAAAAAAAAAAAAwwE4AAAAZAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-11-05T18:55:18.129Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 2,
-              "Title": "Management_Session.cs",
-              "DocumentMoniker": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\GridManagement\\Management_Session.cs",
-              "RelativeDocumentMoniker": "GridManagement\\Management_Session.cs",
-              "ToolTip": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\GridManagement\\Management_Session.cs",
-              "RelativeToolTip": "GridManagement\\Management_Session.cs",
-              "ViewState": "AgIAANgAAAAAAAAAAAAowIcAAAA8AAAAAAAAAA==",
+              "Title": "Core_Session.cs",
+              "DocumentMoniker": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\Core_Session.cs",
+              "RelativeDocumentMoniker": "Core_Session.cs",
+              "ToolTip": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\Core_Session.cs",
+              "RelativeToolTip": "Core_Session.cs",
+              "ViewState": "AgIAABMAAAAAAAAAAAAlwBwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-11-05T22:38:08.138Z",
+              "WhenOpened": "2024-11-05T04:34:40.239Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "Beacon_TerminalControls.cs",
-              "DocumentMoniker": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\ClassBeacon\\Beacon_TerminalControls.cs",
-              "RelativeDocumentMoniker": "ClassBeacon\\Beacon_TerminalControls.cs",
-              "ToolTip": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\ClassBeacon\\Beacon_TerminalControls.cs",
-              "RelativeToolTip": "ClassBeacon\\Beacon_TerminalControls.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAHAAAAA4AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-11-05T18:55:19.608Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
               "Title": "Enforcement_Session.cs",
               "DocumentMoniker": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\GridManagement\\Enforcement_Session.cs",
               "RelativeDocumentMoniker": "GridManagement\\Enforcement_Session.cs",
               "ToolTip": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\GridManagement\\Enforcement_Session.cs",
               "RelativeToolTip": "GridManagement\\Enforcement_Session.cs",
-              "ViewState": "AgIAABQAAAAAAAAAAAAQwC0AAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAmwGsAAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-11-05T17:26:27.161Z",
               "EditorCaption": ""
@@ -87,14 +61,40 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "Core_Session.cs",
-              "DocumentMoniker": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\Core_Session.cs",
-              "RelativeDocumentMoniker": "Core_Session.cs",
-              "ToolTip": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\Core_Session.cs",
-              "RelativeToolTip": "Core_Session.cs",
-              "ViewState": "AgIAAFwAAAAAAAAAAAAowOIAAABaAAAAAAAAAA==",
+              "Title": "Management_Session.cs",
+              "DocumentMoniker": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\GridManagement\\Management_Session.cs",
+              "RelativeDocumentMoniker": "GridManagement\\Management_Session.cs",
+              "ToolTip": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\GridManagement\\Management_Session.cs",
+              "RelativeToolTip": "GridManagement\\Management_Session.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-11-05T04:34:40.239Z",
+              "WhenOpened": "2024-11-05T22:38:08.138Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Beacon_GameLogic.cs",
+              "DocumentMoniker": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\ClassBeacon\\Beacon_GameLogic.cs",
+              "RelativeDocumentMoniker": "ClassBeacon\\Beacon_GameLogic.cs",
+              "ToolTip": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\ClassBeacon\\Beacon_GameLogic.cs",
+              "RelativeToolTip": "ClassBeacon\\Beacon_GameLogic.cs",
+              "ViewState": "AgIAABEAAAAAAAAAAAAxwL0AAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-11-05T18:55:18.129Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Beacon_TerminalControls.cs",
+              "DocumentMoniker": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\ClassBeacon\\Beacon_TerminalControls.cs",
+              "RelativeDocumentMoniker": "ClassBeacon\\Beacon_TerminalControls.cs",
+              "ToolTip": "C:\\Users\\Chet\\AppData\\Roaming\\SpaceEngineers\\Mods\\GRACE_Framework\\Data\\Scripts\\GraceFramework\\ClassBeacon\\Beacon_TerminalControls.cs",
+              "RelativeToolTip": "ClassBeacon\\Beacon_TerminalControls.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAADQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-11-05T18:55:19.608Z",
               "EditorCaption": ""
             }
           ]
