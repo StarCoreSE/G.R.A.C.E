@@ -24,6 +24,7 @@ namespace GraceFramework
         public readonly Guid SettingsID = new Guid("25B52BE2-6D49-4A30-ACEE-FC8727F76F58");
 
         private bool ClientSettingsLoaded = false;
+        public bool IsStatic;
 
         public MySync<string, SyncDirection.BothWays> ClassName;
         public MySync<long, SyncDirection.BothWays> ClassKey;

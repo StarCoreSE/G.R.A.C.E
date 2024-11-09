@@ -122,7 +122,7 @@ namespace GraceFramework
                         int playerClassCount = playerClassCounts.TryGetValue(classDef.ClassKey, out playerClassCount) ? playerClassCount : 0;
                         int factionClassCount = factionClassCounts.TryGetValue(classDef.ClassKey, out factionClassCount) ? factionClassCount : 0;
 
-                        if (playerClassCount < classDef.PerPlayerAmount && factionClassCount < classDef.PerFactionAmount)
+                        if (playerClassCount < classDef.PlayerLimit && factionClassCount < classDef.FactionLimit)
                         {
                             list.Add(new MyTerminalControlComboBoxItem
                             {

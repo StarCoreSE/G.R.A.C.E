@@ -287,7 +287,7 @@ namespace GraceFramework
                     ClassDefinition classDefinition;
                     if (_classDefinitions.TryGetValue(classKey, out classDefinition))
                     {
-                        int maxCount = displayMode == DisplayMode.Player ? classDefinition.PerPlayerAmount : classDefinition.PerFactionAmount;
+                        int maxCount = displayMode == DisplayMode.Player ? classDefinition.PlayerLimit : classDefinition.FactionLimit;
                         HUDMessageContent.Append($"[{classDefinition.ClassName}] {count}/{maxCount} \n");
                     }
                 }

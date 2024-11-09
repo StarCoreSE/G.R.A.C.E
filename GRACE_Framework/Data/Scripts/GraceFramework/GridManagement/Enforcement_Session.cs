@@ -95,6 +95,7 @@ namespace GraceFramework
                         _gridsInViolation.Remove(key);
                     });
 
+                    MyLog.Default.WriteLine($"[GRACE] ClearViolations: Violations Still On List {_gridsInViolation.Count()}");
                     _clearedViolations = true;
                 }
 
@@ -126,12 +127,18 @@ namespace GraceFramework
                     if (violationFound)
                     {
                         if (!_gridsInViolation.ContainsKey(gridInfo.Grid.EntityId))
+                        {
                             _gridsInViolation.Add(gridInfo.Grid.EntityId, gridInfo.Grid);
+                            SaveViolations();
+                        }                         
                     }
                     else
                     {
                         if (_gridsInViolation.ContainsKey(gridInfo.Grid.EntityId))
+                        {
                             _gridsInViolation.Remove(gridInfo.Grid.EntityId);
+                            SaveViolations();
+                        }                    
                     }
                 }
             }
@@ -193,7 +200,7 @@ namespace GraceFramework
             int playerClassCount = _playerClassCounts[gridInfo.Grid.BigOwners.First()][gridInfo.ClassKey];
             int factionClassCount = _factionClassCounts[MyAPIGateway.Session.Factions.TryGetPlayerFaction(gridInfo.Grid.BigOwners.First()).FactionId][gridInfo.ClassKey];
 
-            if (playerClassCount > classDefinition.PerPlayerAmount || factionClassCount > classDefinition.PerFactionAmount)
+            if (playerClassCount > classDefinition.PlayerLimit || factionClassCount > classDefinition.FactionLimit)
             {
                 if (messageBuilder != null)
                     messageBuilder.Append($" - [Limit Exceeded for Grids of Class {gridInfo.ClassName}] \n");
@@ -282,6 +289,12 @@ namespace GraceFramework
                 };
 
                 byte[] serializedData = MyAPIGateway.Utilities.SerializeToBinary(settings);
+                if (serializedData == null || serializedData.Length == 0)
+                {
+                    MyLog.Default.WriteLine($"[GRACE] SaveViolations: Serialization returned empty or null data.");
+                    return;
+                }
+
                 using (var writer = MyAPIGateway.Utilities.WriteBinaryFileInWorldStorage("ViolationsData.bin", typeof(GridLogicSession)))
                 {
                     writer.Write(serializedData, 0, serializedData.Length);
@@ -301,21 +314,22 @@ namespace GraceFramework
             {
                 if (MyAPIGateway.Utilities == null)
                 {
-                    MyLog.Default.WriteLine($"[GRACE] SaveViolations failed: MyAPIGateway.Utilities is null.");
+                    MyLog.Default.WriteLine($"[GRACE] LoadViolations failed: MyAPIGateway.Utilities is null.");
                     return false;
                 }
 
                 var reader = MyAPIGateway.Utilities.ReadBinaryFileInWorldStorage("ViolationsData.bin", typeof(GridLogicSession));
                 using (reader)
                 {
-                    if (reader.BaseStream.Length == 0)
+                    if (reader == null || reader.BaseStream.Length == 0)
+                    {
+                        MyLog.Default.WriteLine($"[GRACE] LoadViolations failed: File ViolationsData.bin does not exist or has no data.");
                         return false;
+                    }
 
                     byte[] data = new byte[reader.BaseStream.Length];
                     reader.Read(data, 0, data.Length);
-
                     var settings = MyAPIGateway.Utilities.SerializeFromBinary<SavedViolations>(data);
-
                     if (settings?.Saved_gridsInViolation != null)
                     {
                         _gridsInViolation = settings.Saved_gridsInViolation
@@ -323,8 +337,12 @@ namespace GraceFramework
                             .Where(grid => grid != null)
                             .ToDictionary(grid => grid.EntityId);
 
-                        MyLog.Default.WriteLine($"[GRACE] SaveViolations: Successfully loaded violation data from session storage.");
+                        MyLog.Default.WriteLine($"[GRACE] LoadViolations: Successfully loaded violation data from session storage.");
                         return true;
+                    }
+                    else
+                    {
+                        MyLog.Default.WriteLine($"[GRACE] LoadViolations: Deserialized settings object is null or missing Saved_gridsInViolation data.");
                     }
                 }
             }
@@ -341,7 +359,7 @@ namespace GraceFramework
     [ProtoContract]
     public class SavedViolations
     {
-        [ProtoMember(1)]
+        [ProtoMember(91)]
         public List<long> Saved_gridsInViolation { get; set; } // Store as a list of grid IDs
     }
 }

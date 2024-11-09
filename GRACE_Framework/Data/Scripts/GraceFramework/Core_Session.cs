@@ -102,8 +102,6 @@ namespace GraceFramework
 
             PurgeHUDMessage();
 
-            SaveViolations();
-
             _trackedGrids.Clear();
             _classDefinitions.Clear();
         }
@@ -122,8 +120,12 @@ namespace GraceFramework
             _grids[grid.EntityId] = grid;
             grid.OnMarkForClose += GridMarkedForClose;
 
+            MyAPIGateway.Utilities.ShowMessage("GRACE", $"Grid {grid.DisplayName} Added to Grid Dict");
+
             if (!HasValidBeacon(grid) || _trackedGrids.ContainsKey(grid.EntityId))
                 return;
+
+            MyAPIGateway.Utilities.ShowMessage("GRACE", $"Grid {grid.DisplayName} Has Valid Beacon");
 
             var logic = GetBeaconLogic(grid);
             var blockCount = new List<IMySlimBlock>();
@@ -138,6 +140,8 @@ namespace GraceFramework
                 Mass = grid.Physics?.Mass ?? 0
             };
 
+            MyAPIGateway.Utilities.ShowMessage("GRACE", $"Grid {grid.DisplayName} GridInfo Inited");
+
             if (grid.BigOwners != null && grid.BigOwners.Count > 0)
             {
                 long factionId = MyAPIGateway.Session.Factions.TryGetPlayerFaction(grid.BigOwners.First())?.FactionId ?? 0;
@@ -147,6 +151,7 @@ namespace GraceFramework
                 _trackedGrids[grid.EntityId].OwnerFactionID = factionId;
 
                 UpdateClassCounts(grid.EntityId, true);
+                MyAPIGateway.Utilities.ShowMessage("GRACE", $"Grid {grid.DisplayName} Counts Updated. Owner: {playerId} Faction:{factionId}");
             }
 
             grid.OnBlockAdded += Grid_OnBlockAdded;

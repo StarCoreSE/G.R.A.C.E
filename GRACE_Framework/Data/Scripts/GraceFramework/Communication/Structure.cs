@@ -20,8 +20,8 @@ namespace Scripts
             [ProtoMember(2)] public string ClassName { get; set; }
             [ProtoMember(3)] public long ClassKey { get; set; }
 
-            [ProtoMember(4)] public int PerFactionAmount { get; set; }
-            [ProtoMember(5)] public int PerPlayerAmount { get; set; }
+            [ProtoMember(4)] public int FactionLimit { get; set; }
+            [ProtoMember(5)] public int PlayerLimit { get; set; }
 
             [ProtoMember(6)] public int MaxBlockCount { get; set; }
             [ProtoMember(7)] public int MinBlockCount { get; set; }
@@ -45,8 +45,8 @@ namespace Scripts
                 ModPath = null;
                 ClassName = className;
                 ClassKey = classKey;
-                PerFactionAmount = perFactionAmount;
-                PerPlayerAmount = perPlayerAmount;
+                FactionLimit = perFactionAmount;
+                PlayerLimit = perPlayerAmount;
                 MaxBlockCount = maxBlockCount;
                 MinBlockCount = minBlockCount;
                 MaxClassWeight = maxClassWeight;
